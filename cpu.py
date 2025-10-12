@@ -11,6 +11,14 @@ class CPU:
         self.PC = 0x0000
         self.SR = 0
         self.running = True
+        self.dispatchers = [lambda: None] * 256
+        self.dispatchers[:4] = [
+            lambda: None,
+            self.load,
+            self.loadi,
+            self.store,
+        ]
+        self.dispatchers[-1] = self.halt
 
     def load_program(self, program, start_address=0xC000):
         self.memory[start_address:(start_address + len(program))] = program
@@ -35,21 +43,15 @@ class CPU:
     def run(self):
         while self.running:
             opcode = self.fetch_byte()
-            if opcode == 0x01: # LOAD Rx, addr
-                self.load()
-            elif opcode == 0x02: # LOAD Rx, imm
-                self.loadi()
-                pass
-            elif opcode == 0x03:
-                self.store()
-                pass
-            elif opcode == 0xFF:
-                self.running = False
-            elif opcode == 0x00:
-                pass
+            if opcode < len(self.dispatchers):
+                self.dispatchers[opcode]()
             else:
                 print(f"Unknown opcode: {opcode:02X} at {self.PC - 1:04X}")
+                self.running = False
             self.debug_state()
+
+    def halt(self):
+        self.running = False
 
     def load(self):
         register = self.fetch_byte()
