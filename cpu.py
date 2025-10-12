@@ -11,13 +11,16 @@ class CPU:
         self.PC = 0x0000
         self.SR = 0
         self.running = True
-        self.dispatchers = [lambda: None] * 256
-        self.dispatchers[:4] = [
+
+        instruction_handlers = [
             lambda: None,
             self.load,
             self.loadi,
             self.store,
+            self.storei,
         ]
+        self.dispatchers = [lambda: None] * 256
+        self.dispatchers[:len(instruction_handlers)] = instruction_handlers
         self.dispatchers[-1] = self.halt
 
     def load_program(self, program, start_address=0xC000):
@@ -105,6 +108,12 @@ class CPU:
         for i in range(len(self.GPR)):
             print(f"R{i}: {self.GPR[i]:04X}, ", end="")
         print(f"SR: {self.SR:04b}")
+    
+    def storei(self):
+        addr = self.fetch_word()
+        value = self.fetch_word()
+        self.memory[addr] = value & 0xFF
+        self.memory[addr + 1] = (value >> 8) & 0xFF
 
 
 cpu = CPU()
@@ -113,6 +122,8 @@ program = [
     0x02, 0x00, 0x02, 0x00, # load 2 to R0
     0x03, 0x00, 0x22, 0x00, # store R0 to addr
     0x01, 0x01, 0x22, 0x00, # load addr to R1
+    0x04, 0x23, 0x00, 0x05, 0x00, # store 5 to addr
+    0x01, 0x00, 0x23, 0x00, # load addr to R0
     0xFF # halt
 ]
 
