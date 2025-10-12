@@ -18,6 +18,10 @@ class CPU:
             self.loadi,
             self.store,
             self.storei,
+            self.add,
+            self.addi,
+            self.sub,
+            self.subi,
         ]
         self.dispatchers = [lambda: None] * 256
         self.dispatchers[:len(instruction_handlers)] = instruction_handlers
@@ -115,6 +119,41 @@ class CPU:
         self.memory[addr] = value & 0xFF
         self.memory[addr + 1] = (value >> 8) & 0xFF
 
+    def add(self):
+        register = self.fetch_byte()
+        value = self.fetch_mem_word()
+        if register in range(self.GPR_COUNT):
+            value = (self.GPR[register] + value)
+            self.GPR[register] = value & 0xFFFF
+            self.set_flags(result=value)
+    
+    def addi(self):
+        register = self.fetch_byte()
+        value = self.fetch_word()
+        if register in range(self.GPR_COUNT):
+            value = (self.GPR[register]) + value
+            self.GPR[register] = value & 0xFFFF
+            self.set_flags(result=value)
+    
+    def sub(self):
+        register = self.fetch_byte()
+        value = self.fetch_mem_word()
+        if register in range(self.GPR_COUNT):
+            value = (self.GPR[register]) - value
+            self.GPR[register] = value & 0xFFFF
+            self.set_flags(result=value)
+        pass
+
+    def subi(self):
+        register = self.fetch_byte()
+        value = self.fetch_word()
+        if register in range(self.GPR_COUNT):
+            value = (self.GPR[register]) - value
+            self.GPR[register] = value & 0xFFFF
+            self.set_flags(result=value)
+        pass
+        
+
 
 cpu = CPU()
 
@@ -124,8 +163,18 @@ program = [
     0x01, 0x01, 0x22, 0x00, # load addr to R1
     0x04, 0x23, 0x00, 0x05, 0x00, # store 5 to addr
     0x01, 0x00, 0x23, 0x00, # load addr to R0
+    0x02, 0x02, 0x0A, 0x00, # load 10 to R2
+    0x05, 0x02, 0x23, 0x00, # add addr to R2
+    0x06, 0x02, 0x07, 0x00, # add 7 to R2
+    0x07, 0x02, 0x23, 0x00, # sub addr 0x23 to R2
+    0x08, 0x02, 0x23, 0x00, # sub 0x23 to R2
     0xFF # halt
 ]
 
-cpu.load_program(program)
-cpu.run()
+with open('program.bin', 'wb') as f:
+    f.write(bytes(program))
+
+with open('program.bin', 'rb') as f:
+    data = f.read()
+    cpu.load_program(data)
+    cpu.run()
