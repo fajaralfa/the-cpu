@@ -3,6 +3,7 @@
 ### Register
 
 | Name | Description |
+| --- | --- |
 | R0 | General Purpose |
 | R1 | General Purpose |
 | R2 | General Purpose |
