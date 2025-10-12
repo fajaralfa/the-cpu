@@ -53,6 +53,30 @@ class CPU:
                 self.running = False
             self.debug_state()
 
+    def set_flags(self, *, result=None, carry=None, overflow=None):
+        if result is not None:
+            self.SR &= ~(self.FLAG_ZERO | self.FLAG_SIGN)
+            if result == 0:
+                self.SR |= self.FLAG_ZERO
+            if result & 0x8000:
+                self.SR |= self.FLAG_SIGN
+
+        if carry is not None:
+            self.SR &= ~self.FLAG_CARRY
+            if carry:
+                self.SR |= self.FLAG_CARRY
+
+        if overflow is not None:
+            self.SR &= ~self.FLAG_OVERFLOW
+            if overflow:
+                self.SR |= self.FLAG_OVERFLOW
+
+    def debug_state(self):
+        print(f"PC: {self.PC:04X}, ", end="")
+        for i in range(len(self.GPR)):
+            print(f"R{i}: {self.GPR[i]:04X}, ", end="")
+        print(f"SR: {self.SR:04b}")
+    
     def halt(self):
         self.running = False
 
@@ -84,30 +108,6 @@ class CPU:
             self.set_flags(result=value)
         else:
             print(f"Unknown register: R{register} at {self.PC - 1:04X}")
-    
-    def set_flags(self, *, result=None, carry=None, overflow=None):
-        if result is not None:
-            self.SR &= ~(self.FLAG_ZERO | self.FLAG_SIGN)
-            if result == 0:
-                self.SR |= self.FLAG_ZERO
-            if result & 0x8000:
-                self.SR |= self.FLAG_SIGN
-
-        if carry is not None:
-            self.SR &= ~self.FLAG_CARRY
-            if carry:
-                self.SR |= self.FLAG_CARRY
-
-        if overflow is not None:
-            self.SR &= ~self.FLAG_OVERFLOW
-            if overflow:
-                self.SR |= self.FLAG_OVERFLOW
-
-    def debug_state(self):
-        print(f"PC: {self.PC:04X}, ", end="")
-        for i in range(len(self.GPR)):
-            print(f"R{i}: {self.GPR[i]:04X}, ", end="")
-        print(f"SR: {self.SR:04b}")
     
     def storei(self):
         addr = self.fetch_word()
