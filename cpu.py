@@ -1,0 +1,118 @@
+class CPU:
+    GPR_COUNT = 3
+    FLAG_ZERO = 0b0001
+    FLAG_CARRY = 0b0010
+    FLAG_OVERFLOW = 0b0100
+    FLAG_SIGN = 0b1000
+
+    def __init__(self) -> None:
+        self.memory = [0] * (2 ** 16)
+        self.GPR = [0] * self.GPR_COUNT
+        self.PC = 0x0000
+        self.SR = 0
+        self.running = True
+
+    def load_program(self, program, start_address=0xC000):
+        self.memory[start_address:(start_address + len(program))] = program
+        self.PC = 0xC000
+
+    def fetch_byte(self):
+        byte = self.memory[self.PC]
+        self.PC += 1
+        return byte
+
+    def fetch_word(self):
+        lo = self.fetch_byte()
+        hi = self.fetch_byte()
+        return lo | (hi << 8)
+
+    def fetch_mem_word(self):
+        addr = self.fetch_word()
+        lo = self.memory[addr]
+        hi = self.memory[addr + 1]
+        return lo | (hi << 8)
+
+    def run(self):
+        while self.running:
+            opcode = self.fetch_byte()
+            if opcode == 0x01: # LOAD Rx, addr
+                self.load()
+            elif opcode == 0x02: # LOAD Rx, imm
+                self.loadi()
+                pass
+            elif opcode == 0x03:
+                self.store()
+                pass
+            elif opcode == 0xFF:
+                self.running = False
+            elif opcode == 0x00:
+                pass
+            else:
+                print(f"Unknown opcode: {opcode:02X} at {self.PC - 1:04X}")
+            self.debug_state()
+
+    def load(self):
+        register = self.fetch_byte()
+        value = self.fetch_mem_word()
+        if register in range(self.GPR_COUNT):
+            self.GPR[register] = value & 0xFFFF
+            self.set_flags(result=value)
+        else:
+            print(f"Unknown register: R{register} at {self.PC - 1:04X}")
+    
+    def loadi(self):
+        register = self.fetch_byte()
+        value = self.fetch_word()
+        if register in range(self.GPR_COUNT):
+            self.GPR[register] = value & 0xFFFF
+            self.set_flags(result=value)
+        else:
+            print(f"Unknown register: R{register} at {self.PC - 1:04X}")
+
+    def store(self):
+        register = self.fetch_byte()
+        addr = self.fetch_word()
+        if register in range(self.GPR_COUNT):
+            value = self.GPR[register]
+            self.memory[addr] = value & 0xFF
+            self.memory[addr + 1] = (value >> 8) & 0xFF
+            self.set_flags(result=value)
+        else:
+            print(f"Unknown register: R{register} at {self.PC - 1:04X}")
+    
+    def set_flags(self, *, result=None, carry=None, overflow=None):
+        if result is not None:
+            self.SR &= ~(self.FLAG_ZERO | self.FLAG_SIGN)
+            if result == 0:
+                self.SR |= self.FLAG_ZERO
+            if result & 0x8000:
+                self.SR |= self.FLAG_SIGN
+
+        if carry is not None:
+            self.SR &= ~self.FLAG_CARRY
+            if carry:
+                self.SR |= self.FLAG_CARRY
+
+        if overflow is not None:
+            self.SR &= ~self.FLAG_OVERFLOW
+            if overflow:
+                self.SR |= self.FLAG_OVERFLOW
+
+    def debug_state(self):
+        print(f"PC: {self.PC:04X}, ", end="")
+        for i in range(len(self.GPR)):
+            print(f"R{i}: {self.GPR[i]:04X}, ", end="")
+        print(f"SR: {self.SR:04b}")
+
+
+cpu = CPU()
+
+program = [
+    0x02, 0x00, 0x02, 0x00, # load 2 to R0
+    0x03, 0x00, 0x22, 0x00, # store R0 to addr
+    0x01, 0x01, 0x22, 0x00, # load addr to R1
+    0xFF # halt
+]
+
+cpu.load_program(program)
+cpu.run()
