@@ -62,9 +62,10 @@ class CPU:
     def set_flags(self, *, result=None, carry=None, overflow=None):
         if result is not None:
             self.SR &= ~(self.FLAG_ZERO | self.FLAG_SIGN)
-            if result == 0:
+            result16 = result & 0xFFFF
+            if result16 == 0:
                 self.SR |= self.FLAG_ZERO
-            if result & 0x8000:
+            if result16 & 0x8000:
                 self.SR |= self.FLAG_SIGN
 
         if carry is not None:
@@ -118,39 +119,62 @@ class CPU:
         self.memory[addr] = value & 0xFF
         self.memory[addr + 1] = (value >> 8) & 0xFF
 
+    @staticmethod
+    def detect_overflow_add(a, b, result):
+        # a, b, result are full 16-bit signed integers
+        sign_a = a & 0x8000
+        sign_b = b & 0x8000
+        sign_r = result & 0x8000
+        # Overflow happens if a and b have same sign, but result has different sign
+        return (sign_a == sign_b) and (sign_r != sign_a)
+
+    @staticmethod
+    def detect_overflow_sub(a, b, result):
+        # Subtraction: overflow if a and b have different signs, and result has different sign from a
+        sign_a = a & 0x8000
+        sign_b = b & 0x8000
+        sign_r = result & 0x8000
+        return (sign_a != sign_b) and (sign_r != sign_a)
+
     def add(self):
         register = self.fetch_byte()
         value = self.fetch_mem_word()
         if register in range(self.GPR_COUNT):
-            value = (self.GPR[register] + value)
-            self.GPR[register] = value & 0xFFFF
-            self.set_flags(result=value)
+            a = self.GPR[register]
+            result = a + value
+            self.GPR[register] = result & 0xFFFF
+            overflow = self.detect_overflow_add(a, value, result)
+            self.set_flags(result=result, overflow=overflow)
     
     def addi(self):
         register = self.fetch_byte()
         value = self.fetch_word()
         if register in range(self.GPR_COUNT):
-            value = (self.GPR[register]) + value
-            self.GPR[register] = value & 0xFFFF
-            self.set_flags(result=value)
+            a = self.GPR[register]
+            result = a + value
+            self.GPR[register] = result & 0xFFFF
+            overflow = self.detect_overflow_add(a, value, result)
+            self.set_flags(result=result, overflow=overflow)
     
     def sub(self):
         register = self.fetch_byte()
         value = self.fetch_mem_word()
         if register in range(self.GPR_COUNT):
-            value = (self.GPR[register]) - value
-            self.GPR[register] = value & 0xFFFF
-            self.set_flags(result=value)
-        pass
+            a = self.GPR[register]
+            result = a - value
+            self.GPR[register] = result & 0xFFFF
+            overflow = self.detect_overflow_sub(a, value, result)
+            self.set_flags(result=result, overflow=overflow)
 
     def subi(self):
         register = self.fetch_byte()
         value = self.fetch_word()
         if register in range(self.GPR_COUNT):
-            value = (self.GPR[register]) - value
-            self.GPR[register] = value & 0xFFFF
-            self.set_flags(result=value)
-        pass
+            a = self.GPR[register]
+            result = a - value
+            self.GPR[register] = result & 0xFFFF
+            overflow = self.detect_overflow_sub(a, value, result)
+            self.set_flags(result=result, overflow=overflow)
 
     def jump(self):
         addr = self.fetch_word()
@@ -168,30 +192,15 @@ class CPU:
 cpu = CPU()
 
 program = [
-    0x02, 0x00, 0x02, 0x00, # load 2 to R0
-    0x03, 0x00, 0x22, 0x00, # store R0 to addr
-    0x01, 0x01, 0x22, 0x00, # load addr to R1
-    0x04, 0x23, 0x00, 0x05, 0x00, # store 5 to addr
-    0x01, 0x00, 0x23, 0x00, # load addr to R0
-    0x02, 0x02, 0x0A, 0x00, # load 10 to R2
-    0x05, 0x02, 0x23, 0x00, # add addr to R2
-    0x06, 0x02, 0x07, 0x00, # add 7 to R2
-    0x07, 0x02, 0x23, 0x00, # sub addr 0x23 to R2
-    0x08, 0x02, 0x23, 0x00, # sub 0x23 to R2
-    0xFF # halt
-]
-
-program = [
-    0x02, 0x00, 0x02, 0x00, # load 2 to R0
-    0x03, 0x00, 0x22, 0x00, # store R0 to addr
-    0x06, 0x00, 0x00, 0x80, # make an overflow
-    0x08, 0x00, 0x00, 0x83, # make negative sign
-    0x09, 0x25, 0xC0, 0b1100,# jump to 0xC025 addr
-    0x01, 0x01, 0x22, 0x00, # load addr to R1
-    0x04, 0x23, 0x00, 0x05, 0x00, # store 5 to addr
-    0x01, 0x00, 0x23, 0x00, # load addr to R0
-    0x02, 0x02, 0x0A, 0x00, # load 10 to R2
-    0x06, 0x02, 0x07, 0x00, # add 7 to R2
+    0x02, 0x00, 0x02, 0x00, # load R0, 2
+    0x03, 0x00, 0x22, 0x00, # store R0, 0x22
+    0x06, 0x00, 0xFF, 0x7F, # addi R0, 0x7FFF
+    0x09, 0x1D, 0xC0, 0b1100,# j 0xC025, 0b1100
+    0x01, 0x01, 0x22, 0x00, # load 0x22, R1
+    0x04, 0x23, 0x00, 0x05, 0x00, # store 0x23, 0x05
+    0x01, 0x00, 0x23, 0x00, # load R0, 0x23
+    0x02, 0x02, 0x0A, 0x00, # load R2, 0x0A
+    0x06, 0x02, 0x07, 0x00, # addi R2, 0x07
     0xFF # halt
 ]
 
