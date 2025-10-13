@@ -22,6 +22,8 @@ class CPU:
             self.addi,
             self.sub,
             self.subi,
+            self.jump,
+            self.jumpnot,
         ]
         self.dispatchers = [lambda: None] * 256
         self.dispatchers[:len(instruction_handlers)] = instruction_handlers
@@ -152,7 +154,18 @@ class CPU:
             self.GPR[register] = value & 0xFFFF
             self.set_flags(result=value)
         pass
-        
+
+    def jump(self):
+        addr = self.fetch_word()
+        flags = self.fetch_byte()
+        if flags == self.SR:
+            self.PC = addr
+    
+    def jumpnot(self):
+        addr = self.fetch_word()
+        flags = self.fetch_byte()
+        if flags != self.SR:
+            self.PC = addr
 
 
 cpu = CPU()
@@ -168,6 +181,20 @@ program = [
     0x06, 0x02, 0x07, 0x00, # add 7 to R2
     0x07, 0x02, 0x23, 0x00, # sub addr 0x23 to R2
     0x08, 0x02, 0x23, 0x00, # sub 0x23 to R2
+    0xFF # halt
+]
+
+program = [
+    0x02, 0x00, 0x02, 0x00, # load 2 to R0
+    0x03, 0x00, 0x22, 0x00, # store R0 to addr
+    0x06, 0x00, 0x00, 0x80, # make an overflow
+    0x08, 0x00, 0x00, 0x83, # make negative sign
+    0x09, 0x25, 0xC0, 0b1100,# jump to 0xC025 addr
+    0x01, 0x01, 0x22, 0x00, # load addr to R1
+    0x04, 0x23, 0x00, 0x05, 0x00, # store 5 to addr
+    0x01, 0x00, 0x23, 0x00, # load addr to R0
+    0x02, 0x02, 0x0A, 0x00, # load 10 to R2
+    0x06, 0x02, 0x07, 0x00, # add 7 to R2
     0xFF # halt
 ]
 

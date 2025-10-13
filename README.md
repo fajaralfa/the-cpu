@@ -37,14 +37,8 @@ Instruction Set:
 | ADDI RX, #imm | Add RX with memory value | 0x06, reg, imm_hi, imm_lo |
 | SUB RX, addr | Subtract RX with memory value | 0x07, reg, addr_hi, addr_lo |
 | SUBI RX, #imm | Subtract RX with memory value | 0x08, reg, imm_hi, imm_lo |
-| JZ addr | Jump if SR flag Zero | 0x09, addr_hi, addr_lo |
-| JNZ addr | Jump if SR flag !Zero | 0x0A, addr_hi, addr_lo |
-| JC addr | Jump if SR flag Carry | 0x0B, addr_hi, addr_lo |
-| JNC addr | Jump if SR flag !Carry | 0x0C, addr_hi, addr_lo |
-| JO addr | Jump if SR flag Overflow | 0x0D, addr_hi, addr_lo |
-| JNO addr | Jump if SR flag !Overflow | 0x0E, addr_hi, addr_lo |
-| JS addr | Jump if SR flag Sign | 0x0F, addr_hi, addr_lo |
-| JNS addr | Jump if SR flag !Sign | 0x10, addr_hi, addr_lo |
+| J addr, flags | Jump if SR is flags | 0x09, addr_hi, addr_lo, flags |
+| JN addr, flags | Jump if SR is not flags | 0x0A, addr_hi, addr_lo, flags |
 | HLT | Halt Execution | 0xFF |
 
 ### Status Register
