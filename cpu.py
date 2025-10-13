@@ -91,7 +91,6 @@ class CPU:
         value = self.fetch_mem_word()
         if register in range(self.GPR_COUNT):
             self.GPR[register] = value & 0xFFFF
-            self.set_flags(result=value)
         else:
             print(f"Unknown register: R{register} at {self.PC - 1:04X}")
     
@@ -100,7 +99,6 @@ class CPU:
         value = self.fetch_word()
         if register in range(self.GPR_COUNT):
             self.GPR[register] = value & 0xFFFF
-            self.set_flags(result=value)
         else:
             print(f"Unknown register: R{register} at {self.PC - 1:04X}")
 
@@ -111,7 +109,6 @@ class CPU:
             value = self.GPR[register]
             self.memory[addr] = value & 0xFF
             self.memory[addr + 1] = (value >> 8) & 0xFF
-            self.set_flags(result=value)
         else:
             print(f"Unknown register: R{register} at {self.PC - 1:04X}")
     
