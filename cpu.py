@@ -179,13 +179,13 @@ class CPU:
     def jump(self):
         addr = self.fetch_word()
         flags = self.fetch_byte()
-        if flags == self.SR:
+        if (self.SR & flags) == flags:
             self.PC = addr
     
     def jumpnot(self):
         addr = self.fetch_word()
         flags = self.fetch_byte()
-        if flags != self.SR:
+        if (self.SR & flags) != flags:
             self.PC = addr
 
 
