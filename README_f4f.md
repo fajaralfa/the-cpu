@@ -30,10 +30,34 @@
 
 - notes: value is two's complement
 
-| Mnemonic | Fields Size | Description |
+| Opcode | Machine Code | Description |
+| - | - | - |
+| lw | 0x00 |
+| sw | 0x01 |
+| lui | 0x02 |
+| ldi | 0x03 |
+| add | 0x04 |
+| sub | 0x05 |
+| mul | 0x06 |
+| div | 0x07 |
+| rem | 0x08 |
+| and | 0x09 |
+| not | 0x0a |
+| or | 0x0b |
+| xor | 0x0c |
+| sll | 0x0d |
+| srl | 0x0e |
+| sra | 0x0f |
+| ja | 0x10 |
+| jr | 0x11 |
+| beq | 0x12 |
+| bne | 0x13 |
+| halt | 0x1f |
+
+| Mnemonic | Fields Size | Operation |
 | - | - | - |
 | lw x1, x2, 5 | 5, 3, 3, 5 (op, dest, base, offset) | x1 = mem[x2 + offset] |
-| sw x1, x2, 5 | 5, 3, 3, 5 (op, dest, base, offset) | mem[x2 + offset] = x1 |
+| sw x1, x2, 5 | 5, 3, 3, 5 (op, src, base, offset) | mem[x2 + offset] = x1 |
 | lui x1, #0xFF00 | 5, 3, 8 (op, dest, val) | x1 = 0xFF00 |
 | ldi x1, #0x00FF | 5, 3, 8 (op, dest, val) | x1 += 0x00FF |
 | add x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 + x3 |

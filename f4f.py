@@ -3,8 +3,11 @@ class F4F:
         self.running = True
         self.register = [0] * 6
         self.memory = [0] * (2 ** 16)
-        handler = []
         self.handler = [None] * (2 ** 5)
+        handler = [
+                self.h_load_word,
+                self.h_store_word,
+        ]
         self.handler[0:len(handler)] = handler
         self.handler[-1] = self.h_halt
 
@@ -16,26 +19,59 @@ class F4F:
     def run_program(self):
         while self.running:
             instruction = self.fetch()
-            print('instruction', hex(instruction))
-            opcode = self.decode(instruction)
-            print('opcode', hex(opcode))
+            opcode, operand = self.decode(instruction)
             handler = self.handler[opcode]
             if handler is not None:
-                handler()
+                handler(operand)
             else:
                 print(f'invalid opcode at {self.register[0]:4X}')
+                break
+            self.debug_state()
+            break
+
+    def fetch_word(self, address):
+        low = self.memory[address]
+        high = self.memory[address + 1]
+        word = low | (high << 8)
+        return word
 
     def fetch(self):
-        instruction = (self.memory[self.register[0]] << 8) + self.memory[self.register[0] + 1]
+        address = self.register[0]
         self.register[0] += 2
-        return instruction
+        return self.fetch_word(address)
     
     def decode(self, instruction):
-        opcode = (instruction >> 11)
-        return opcode
+        opcode = (instruction >> 11) & ((1 << 5) - 1)
+        operand = instruction & ((1 << 11) - 1)
+        return opcode, operand
 
-    def h_halt(self):
+    def debug_state(self):
+        print(f"PC: {self.register[0]:04X}, ", end="")
+        for i in range(3, 6):
+            print(f"R{i}: {self.register[i]:04X}, ", end="")
+        print(f"SR: {self.register[1]:04b}")
+
+    def h_halt(self, operand):
         self.running = False
+
+    def h_load_word(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        base_register = (operand >> 5) & ((1 << 3) - 1)
+        base = self.register[base_register]
+        offset = operand & ((1 << 5) - 1)
+        word = self.fetch_word(base + offset)
+        self.register[dest] = word
+
+    def h_store_word(self, operand):
+        src = (operand >> 8) & ((1 << 3) - 1)
+        base_register = (operand >> 5) & ((1 << 3) - 1)
+        base = self.register[base_register]
+        offset = operand & ((1 << 5) - 1)
+        address = base + offset
+        low = self.register[src] & 0xFF
+        high = (self.register[src] >> 8) & 0xFF
+        self.memory[address] = low
+        self.memory[address + 1] = high
 
 
 cpu = F4F()
