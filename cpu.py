@@ -1,213 +1,86 @@
 class CPU:
-    GPR_COUNT = 3
-    FLAG_ZERO = 0b0001
-    FLAG_CARRY = 0b0010
-    FLAG_OVERFLOW = 0b0100
-    FLAG_SIGN = 0b1000
-
-    def __init__(self) -> None:
-        self.memory = [0] * (2 ** 16)
-        self.GPR = [0] * self.GPR_COUNT
-        self.PC = 0x0000
-        self.SR = 0
+    def __init__(self):
         self.running = True
-
-        instruction_handlers = [
-            lambda: None,
-            self.load,
-            self.loadi,
-            self.store,
-            self.storei,
-            self.add,
-            self.addi,
-            self.sub,
-            self.subi,
-            self.jump,
-            self.jumpnot,
+        self.register = [0] * 6
+        self.memory = [0] * (2 ** 16)
+        self.handler = [None] * (2 ** 5)
+        handler = [
+                self.h_load_word,
+                self.h_store_word,
         ]
-        self.dispatchers = [lambda: None] * 256
-        self.dispatchers[:len(instruction_handlers)] = instruction_handlers
-        self.dispatchers[-1] = self.halt
+        self.handler[0:len(handler)] = handler
+        self.handler[-1] = self.h_halt
 
-    def load_program(self, program, start_address=0xC000):
+    def load_program(self, program: list, start_address=0xC000):
+        self.register[0] = start_address
         self.memory[start_address:(start_address + len(program))] = program
-        self.PC = 0xC000
+        pass
 
-    def fetch_byte(self):
-        byte = self.memory[self.PC]
-        self.PC += 1
-        return byte
-
-    def fetch_word(self):
-        lo = self.fetch_byte()
-        hi = self.fetch_byte()
-        return lo | (hi << 8)
-
-    def fetch_mem_word(self):
-        addr = self.fetch_word()
-        lo = self.memory[addr]
-        hi = self.memory[addr + 1]
-        return lo | (hi << 8)
-
-    def run(self):
+    def run_program(self):
         while self.running:
-            opcode = self.fetch_byte()
-            if opcode < len(self.dispatchers):
-                self.dispatchers[opcode]()
+            instruction = self.fetch()
+            opcode, operand = self.decode(instruction)
+            handler = self.handler[opcode]
+            if handler is not None:
+                handler(operand)
             else:
-                print(f"Unknown opcode: {opcode:02X} at {self.PC - 1:04X}")
-                self.running = False
+                print(f'invalid opcode at {self.register[0]:4X}')
+                break
             self.debug_state()
+            break
 
-    def set_flags(self, *, result=None, carry=None, overflow=None):
-        if result is not None:
-            self.SR &= ~(self.FLAG_ZERO | self.FLAG_SIGN)
-            result16 = result & 0xFFFF
-            if result16 == 0:
-                self.SR |= self.FLAG_ZERO
-            if result16 & 0x8000:
-                self.SR |= self.FLAG_SIGN
+    def fetch_word(self, address):
+        low = self.memory[address]
+        high = self.memory[address + 1]
+        word = low | (high << 8)
+        return word
 
-        if carry is not None:
-            self.SR &= ~self.FLAG_CARRY
-            if carry:
-                self.SR |= self.FLAG_CARRY
-
-        if overflow is not None:
-            self.SR &= ~self.FLAG_OVERFLOW
-            if overflow:
-                self.SR |= self.FLAG_OVERFLOW
+    def fetch(self):
+        address = self.register[0]
+        self.register[0] += 2
+        return self.fetch_word(address)
+    
+    def decode(self, instruction):
+        opcode = (instruction >> 11) & ((1 << 5) - 1)
+        operand = instruction & ((1 << 11) - 1)
+        return opcode, operand
 
     def debug_state(self):
-        print(f"PC: {self.PC:04X}, ", end="")
-        for i in range(len(self.GPR)):
-            print(f"R{i}: {self.GPR[i]:04X}, ", end="")
-        print(f"SR: {self.SR:04b}")
-    
-    def halt(self):
+        print(f"PC: {self.register[0]:04X}, ", end="")
+        for i in range(3, 6):
+            print(f"R{i}: {self.register[i]:04X}, ", end="")
+        print(f"SR: {self.register[1]:04b}")
+
+    def h_halt(self, operand):
         self.running = False
 
-    def load(self):
-        register = self.fetch_byte()
-        value = self.fetch_mem_word()
-        if register in range(self.GPR_COUNT):
-            self.GPR[register] = value & 0xFFFF
-        else:
-            print(f"Unknown register: R{register} at {self.PC - 1:04X}")
-    
-    def loadi(self):
-        register = self.fetch_byte()
-        value = self.fetch_word()
-        if register in range(self.GPR_COUNT):
-            self.GPR[register] = value & 0xFFFF
-        else:
-            print(f"Unknown register: R{register} at {self.PC - 1:04X}")
+    def h_load_word(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        base_register = (operand >> 5) & ((1 << 3) - 1)
+        base = self.register[base_register]
+        offset = operand & ((1 << 5) - 1)
+        word = self.fetch_word(base + offset)
+        self.register[dest] = word
 
-    def store(self):
-        register = self.fetch_byte()
-        addr = self.fetch_word()
-        if register in range(self.GPR_COUNT):
-            value = self.GPR[register]
-            self.memory[addr] = value & 0xFF
-            self.memory[addr + 1] = (value >> 8) & 0xFF
-        else:
-            print(f"Unknown register: R{register} at {self.PC - 1:04X}")
-    
-    def storei(self):
-        addr = self.fetch_word()
-        value = self.fetch_word()
-        self.memory[addr] = value & 0xFF
-        self.memory[addr + 1] = (value >> 8) & 0xFF
-
-    @staticmethod
-    def detect_overflow_add(a, b, result):
-        # a, b, result are full 16-bit signed integers
-        sign_a = a & 0x8000
-        sign_b = b & 0x8000
-        sign_r = result & 0x8000
-        # Overflow happens if a and b have same sign, but result has different sign
-        return (sign_a == sign_b) and (sign_r != sign_a)
-
-    @staticmethod
-    def detect_overflow_sub(a, b, result):
-        # Subtraction: overflow if a and b have different signs, and result has different sign from a
-        sign_a = a & 0x8000
-        sign_b = b & 0x8000
-        sign_r = result & 0x8000
-        return (sign_a != sign_b) and (sign_r != sign_a)
-
-    def add(self):
-        register = self.fetch_byte()
-        value = self.fetch_mem_word()
-        if register in range(self.GPR_COUNT):
-            a = self.GPR[register]
-            result = a + value
-            self.GPR[register] = result & 0xFFFF
-            overflow = self.detect_overflow_add(a, value, result)
-            self.set_flags(result=result, overflow=overflow)
-    
-    def addi(self):
-        register = self.fetch_byte()
-        value = self.fetch_word()
-        if register in range(self.GPR_COUNT):
-            a = self.GPR[register]
-            result = a + value
-            self.GPR[register] = result & 0xFFFF
-            overflow = self.detect_overflow_add(a, value, result)
-            self.set_flags(result=result, overflow=overflow)
-    
-    def sub(self):
-        register = self.fetch_byte()
-        value = self.fetch_mem_word()
-        if register in range(self.GPR_COUNT):
-            a = self.GPR[register]
-            result = a - value
-            self.GPR[register] = result & 0xFFFF
-            overflow = self.detect_overflow_sub(a, value, result)
-            self.set_flags(result=result, overflow=overflow)
-
-    def subi(self):
-        register = self.fetch_byte()
-        value = self.fetch_word()
-        if register in range(self.GPR_COUNT):
-            a = self.GPR[register]
-            result = a - value
-            self.GPR[register] = result & 0xFFFF
-            overflow = self.detect_overflow_sub(a, value, result)
-            self.set_flags(result=result, overflow=overflow)
-
-    def jump(self):
-        addr = self.fetch_word()
-        flags = self.fetch_byte()
-        if (self.SR & flags) == flags:
-            self.PC = addr
-    
-    def jumpnot(self):
-        addr = self.fetch_word()
-        flags = self.fetch_byte()
-        if (self.SR & flags) != flags:
-            self.PC = addr
+    def h_store_word(self, operand):
+        src = (operand >> 8) & ((1 << 3) - 1)
+        base_register = (operand >> 5) & ((1 << 3) - 1)
+        base = self.register[base_register]
+        offset = operand & ((1 << 5) - 1)
+        address = base + offset
+        low = self.register[src] & 0xFF
+        high = (self.register[src] >> 8) & 0xFF
+        self.memory[address] = low
+        self.memory[address + 1] = high
 
 
 cpu = CPU()
 
 program = [
-    0x02, 0x00, 0x02, 0x00, # load R0, 2
-    0x03, 0x00, 0x22, 0x00, # store R0, 0x22
-    0x06, 0x00, 0xFF, 0x7F, # addi R0, 0x7FFF
-    0x09, 0x1D, 0xC0, 0b1100,# j 0xC025, 0b1100
-    0x01, 0x01, 0x22, 0x00, # load 0x22, R1
-    0x04, 0x23, 0x00, 0x05, 0x00, # store 0x23, 0x05
-    0x01, 0x00, 0x23, 0x00, # load R0, 0x23
-    0x02, 0x02, 0x0A, 0x00, # load R2, 0x0A
-    0x06, 0x02, 0x07, 0x00, # addi R2, 0x07
-    0xFF # halt
+    0x12, 0xFF, # random instruction
+    0x01, 0x23, # random instruction
+    (0x1f << 3), 0x00 # halt
 ]
 
-with open('program.bin', 'wb') as f:
-    f.write(bytes(program))
-
-with open('program.bin', 'rb') as f:
-    data = f.read()
-    cpu.load_program(data)
-    cpu.run()
+cpu.load_program(program)
+cpu.run_program()
