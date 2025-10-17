@@ -36,7 +36,7 @@
 | lw | 0x00 | lw x1, x2, 5 | 5, 3, 3, 5 (op, dest, base, offset) | x1 = mem[x2 + offset] |
 | sw | 0x01 | sw x1, x2, 5 | 5, 3, 3, 5 (op, src, base, offset) | mem[x2 + offset] = x1 |
 | lui | 0x02 |lui x1, #0xFF00 | 5, 3, 8 (op, dest, val) | x1 = 0xFF00 |
-| ldi | 0x03 | ldi x1, #0x00FF | 5, 3, 8 (op, dest, val) | x1 += 0x00FF |
+| addi | 0x03 | addi x1, #0x00FF | 5, 3, 8 (op, dest, val) | x1 += 0x00FF |
 | add | 0x04 |add x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 + x3 |
 | sub | 0x05 |sub x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 - x3 |
 | mul | 0x06 |mul x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 * x3 |
