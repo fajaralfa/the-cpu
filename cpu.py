@@ -29,7 +29,6 @@ class CPU:
                 raise IllegalInstructionException()
                 break
             self.debug_state()
-            break
 
     def fetch_word(self, address):
         if address % 2 != 0:
