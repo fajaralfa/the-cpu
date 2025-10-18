@@ -245,10 +245,32 @@ class TestRunSimpleProgram(unittest.TestCase):
 
     def test_run(self):
         # build instruction
-        # 
-        program = [
+        program = build_program([
+            # load immediate 0x357F to x1
+            (0x02 << 11) | (0x03 << 8) | 0x35, # lui x1, 0x35
+            (0x03 << 11) | (0x03 << 8) | 0x7F, # addi x1, 0x7F
 
-        ]
+            # load immediate 0x0034 to x2
+            (0x03 << 11) | (0x04 << 8) | 0x34, # addi x2, 34
+
+            # add x1 & x2 and store to x1
+            (0x04 << 11) | (0x03 << 8) | (0x03 << 5) | (0x04 << 2), # add x1, x1, x2
+
+            # store x1 to address 0x00FE
+            (0x03 << 11) | (0x05 << 8) | 0xFE, # addi x3, 0xFF
+            (0x01 << 11) | (0x03 << 8) | (0x05 << 5), # sw x1, 0(x3)
+
+            # load address 0x00FF to x3
+            (0x00 << 11) | (0x05 << 8) | (0x05 << 5), # lw x3, 0(x3)
+
+            # halt
+            (0xFF << 11)
+        ])
+
+        self.cpu.load_program(program)
+        self.cpu.run_program()
+
+        self.assertEqual(self.cpu.register[5], 0x35b3)
 
 
 if __name__ == "__main__":
