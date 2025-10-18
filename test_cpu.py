@@ -33,7 +33,7 @@ class TestFetchMemory(unittest.TestCase):
         self.assertEqual(result, 0x25FC)
 
     def test_fetch_word_out_of_bound(self):
-        with self.assertRaises(cpu.SegFaultException):
+        with self.assertRaises(cpu.OutOfBoundException):
             self.cpu.fetch_word(0x10000)
 
     def test_fetch_word_misaligned(self):
@@ -66,7 +66,7 @@ class TestFetchDecode(unittest.TestCase):
         self.cpu.load_program(program, 0xFFFC)
         self.cpu.fetch()
         self.cpu.fetch()
-        with self.assertRaises(cpu.SegFaultException):
+        with self.assertRaises(cpu.OutOfBoundException):
             self.cpu.fetch()
 
     def test_decode(self):

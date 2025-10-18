@@ -34,8 +34,8 @@ class CPU:
     def fetch_word(self, address):
         if address % 2 != 0:
             raise MisalignedMemoryException()
-        if address >= 0xFFFF:
-            raise SegFaultException()
+        if address >= len(self.memory) - 1:
+            raise OutOfBoundException()
         low = self.memory[address]
         high = self.memory[address + 1]
         word = low | (high << 8)
@@ -43,6 +43,8 @@ class CPU:
 
     def fetch(self):
         address = self.register[0]
+        if address >= len(self.memory) - 1:
+            raise OutOfBoundException()
         self.register[0] += 2
         return self.fetch_word(address)
     
