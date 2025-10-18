@@ -10,6 +10,7 @@ class CPU:
                 self.h_load_upper_immediate,
                 self.h_add_immediate,
                 self.h_add,
+                self.h_sub,
         ]
         self.handler[0:len(handler)] = handler
         self.handler[-1] = self.h_halt
@@ -88,6 +89,12 @@ class CPU:
             self.register[dest] = new
         else:
             self.register[dest] = new % 0xFFFF
+        
+    def h_sub(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        src1 = (operand >> 5) & ((1 << 3) - 1)
+        src2 = (operand >> 2) & ((1 << 3) - 1)
+        self.register[dest] = (self.register[src1] - self.register[src2]) % (2 ** 16)
 
     def h_load_word(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)

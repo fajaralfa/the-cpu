@@ -273,5 +273,36 @@ class TestRunSimpleProgram(unittest.TestCase):
         self.assertEqual(self.cpu.register[5], 0x35b3)
 
 
+class TestSubtract(unittest.TestCase):
+    def setUp(self):
+        self.cpu = cpu.CPU()
+
+    def test_subtract(self):
+        dest = 3
+        src1 = 4
+        src2 = 3
+        # set register value
+        self.cpu.register[src1] = 451
+        self.cpu.register[src2] = 51
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        self.cpu.h_sub(operand)
+
+        self.assertEqual(self.cpu.register[dest], 400)
+    
+    def test_subtract_wrap_around(self):
+        dest = 3
+        src1 = 4
+        src2 = 3
+        # set register value
+        self.cpu.register[src1] = 10
+        self.cpu.register[src2] = 12
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        self.cpu.h_sub(operand)
+
+        self.assertEqual(self.cpu.register[dest], (2 ** 16) - 2)
+
+
 if __name__ == "__main__":
     unittest.main()
