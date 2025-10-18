@@ -212,6 +212,33 @@ class TestLoadStoreWord(unittest.TestCase):
             self.cpu.h_store_word(operand)
 
 
+class TestAdd(unittest.TestCase):
+    def setUp(self):
+        self.cpu = cpu.CPU()
+
+    def test_add(self):
+        dest = 3
+        src1 = 3
+        src2 = 4
+        self.cpu.register[src1] = 0xFA9
+        self.cpu.register[src2] = 0xF010
+        result = self.cpu.register[src1] + self.cpu.register[src2]
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        self.cpu.h_add(operand)
+
+        self.assertEqual(self.cpu.register[dest], result)
+
+
+def build_program(instructions):
+    program = []
+    for i in instructions:
+        low = i & 0xFF
+        high = (i >> 8) & 0xFF
+        program.append(low)
+        program.append(high)
+    return program
+
 class TestRunSimpleProgram(unittest.TestCase):
     def setUp(self):
         self.cpu = cpu.CPU()

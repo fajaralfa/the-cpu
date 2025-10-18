@@ -9,6 +9,7 @@ class CPU:
                 self.h_store_word,
                 self.h_load_upper_immediate,
                 self.h_add_immediate,
+                self.h_add,
         ]
         self.handler[0:len(handler)] = handler
         self.handler[-1] = self.h_halt
@@ -73,6 +74,16 @@ class CPU:
         value = operand & 0xFF
         current = self.register[dest]
         new = current + value
+        if new <= 0xFFFF:
+            self.register[dest] = new
+        else:
+            self.register[dest] = new % 0xFFFF
+
+    def h_add(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        src1 = (operand >> 5) & ((1 << 3) - 1)
+        src2 = (operand >> 2) & ((1 << 3) - 1)
+        new = self.register[src1] + self.register[src2]
         if new <= 0xFFFF:
             self.register[dest] = new
         else:
