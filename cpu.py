@@ -7,6 +7,8 @@ class CPU:
         handler = [
                 self.h_load_word,
                 self.h_store_word,
+                self.h_load_upper_immediate,
+                self.h_add_immediate,
         ]
         self.handler[0:len(handler)] = handler
         self.handler[-1] = self.h_halt
