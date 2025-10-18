@@ -90,6 +90,7 @@ class TestHalt(unittest.TestCase):
         self.cpu.h_halt(0)
         self.cpu.running = False
 
+
 class TestLoadImmediate(unittest.TestCase):
     def setUp(self):
         self.cpu = cpu.CPU()
@@ -117,6 +118,30 @@ class TestLoadImmediate(unittest.TestCase):
         operand_lower = (register_dest << 8) | low_value
         self.cpu.h_load_upper_immediate(operand_upper)
         self.cpu.h_add_immediate(operand_lower)
+        self.assertEqual(self.cpu.register[register_dest], value)
+
+
+class TestAddImmediate(unittest.TestCase):
+    def setUp(self):
+        self.cpu = cpu.CPU()
+    
+    def test_add(self):
+        register_dest = 4
+        value = 0xEA
+        operand = (register_dest << 8) | value
+        self.cpu.h_add_immediate(operand)
+        self.assertEqual(self.cpu.register[register_dest], value)
+
+    def test_add_overflow(self):
+        register_dest = 5
+        value = 0xFF
+        operand = (register_dest << 8) | value
+        self.cpu.h_load_upper_immediate(operand)
+        self.cpu.h_add_immediate(operand)
+        # actual overflow
+        value = 0x11
+        operand = (register_dest << 8) | value
+        self.cpu.h_add_immediate(operand)
         self.assertEqual(self.cpu.register[register_dest], value)
 
 

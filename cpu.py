@@ -68,7 +68,12 @@ class CPU:
     def h_add_immediate(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
         value = operand & 0xFF
-        self.register[dest] += value
+        current = self.register[dest]
+        new = current + value
+        if new <= 0xFFFF:
+            self.register[dest] = new
+        else:
+            self.register[dest] = new % 0xFFFF
 
     def h_load_word(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
