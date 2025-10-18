@@ -12,6 +12,8 @@ class CPU:
         self.handler[-1] = self.h_halt
 
     def load_program(self, program: list, start_address=0xC000):
+        if start_address + len(program) > len(self.memory):
+            raise OutOfBoundException()
         self.register[0] = start_address
         self.memory[start_address:(start_address + len(program))] = program
         pass
@@ -24,12 +26,16 @@ class CPU:
             if handler is not None:
                 handler(operand)
             else:
-                print(f'invalid opcode at {self.register[0]:4X}')
+                raise IllegalInstructionException()
                 break
             self.debug_state()
             break
 
     def fetch_word(self, address):
+        if address % 2 != 0:
+            raise MisalignedMemoryException()
+        if address >= 0xFFFF:
+            raise SegFaultException()
         low = self.memory[address]
         high = self.memory[address + 1]
         word = low | (high << 8)
@@ -68,19 +74,19 @@ class CPU:
         base = self.register[base_register]
         offset = operand & ((1 << 5) - 1)
         address = base + offset
+        if (address % 2 != 0):
+            raise MisalignedMemoryException()
         low = self.register[src] & 0xFF
         high = (self.register[src] >> 8) & 0xFF
         self.memory[address] = low
         self.memory[address + 1] = high
 
 
-cpu = CPU()
-
-program = [
-    0x12, 0xFF, # random instruction
-    0x01, 0x23, # random instruction
-    (0x1f << 3), 0x00 # halt
-]
-
-cpu.load_program(program)
-cpu.run_program()
+class IllegalInstructionException(Exception):
+    pass
+class SegFaultException(Exception):
+    pass
+class OutOfBoundException(Exception):
+    pass
+class MisalignedMemoryException(Exception):
+    pass
