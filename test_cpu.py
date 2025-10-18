@@ -229,6 +229,19 @@ class TestAdd(unittest.TestCase):
 
         self.assertEqual(self.cpu.register[dest], result)
 
+    def test_add_wrap_around(self):
+        dest = 3
+        src1 = 3
+        src2 = 4
+        self.cpu.register[src1] = 0xFFFF
+        self.cpu.register[src2] = 20
+        result = self.cpu.register[src1] + self.cpu.register[src2]
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        self.cpu.h_add(operand)
+
+        self.assertEqual(self.cpu.register[dest], 19)
+
 
 def build_program(instructions):
     program = []
