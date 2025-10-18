@@ -60,6 +60,16 @@ class CPU:
     def h_halt(self, operand):
         self.running = False
 
+    def h_load_upper_immediate(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        value_upper = (operand & 0xFF) << 8
+        self.register[dest] = value_upper
+    
+    def h_add_immediate(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        value = operand & 0xFF
+        self.register[dest] += value
+
     def h_load_word(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
         base_register = (operand >> 5) & ((1 << 3) - 1)
