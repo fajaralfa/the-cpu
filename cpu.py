@@ -31,7 +31,6 @@ class CPU:
                 handler(operand)
             else:
                 raise IllegalInstructionException()
-                break
             self.debug_state()
 
     def fetch_word(self, address):
