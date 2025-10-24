@@ -7,11 +7,13 @@
 | ABI Name | Register | Description | Register Address |
 | - | - | - | - |
 | pc | r0 | Program Counter | 0x00 |
-| sr | r1 | Status Register | 0x01 |
-| sp | r2 | Stack Pointer | 0x02 |
-| x1 | r3 | General Purpose | 0x03 |
-| x2 | r4 | General Purpose | 0x04 |
-| x3 | r5 | General Purpose | 0x05 |
+| sp | r1 | Stack Pointer | 0x01 |
+| x1 | r2 | General Purpose | 0x02 |
+| x2 | r3 | General Purpose | 0x03 |
+| x3 | r4 | General Purpose | 0x04 |
+| mepc | r5 | Exception Program Counter | 0x05 |
+| mcause | r6 | Cause of Exception | 0x06 |
+| mtvec | r7 | Trap Handler Address | 0x07 |
 
 ### Memory
 
