@@ -18,9 +18,6 @@
 ### Memory
 
 - 64KB address space (16 bit addresses)
-- Mapped as:
-    - 0x0000 - 0xBFFF: general RAM
-    - 0xC000 - 0xFFFF: ROM
 
 ### Instruction
 
