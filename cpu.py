@@ -54,6 +54,13 @@ class CPU:
         opcode = (instruction >> 11) & ((1 << 5) - 1)
         operand = instruction & ((1 << 11) - 1)
         return opcode, operand
+    
+    def to_signed_16(self, value):
+        value &= 0xFFFF
+        if value & 8000:
+            return value - 0x10000
+        else:
+            return value
 
     def debug_state(self):
         print(f"PC: {self.register[0]:04X}, ", end="")
@@ -112,6 +119,18 @@ class CPU:
         high = (self.register[src] >> 8) & 0xFF
         self.memory[address] = low
         self.memory[address + 1] = high
+        
+    def h_jump_absolute(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        addr = self.register[dest]
+        if addr % 2 != 0:
+            raise MisalignedMemoryException()
+        self.register[0] = addr
+
+    def h_jump_relative(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        offset = self.to_signed_16(self.register[dest])
+        self.register[0] = (self.register[0] + offset) & 0xFFFF
 
 
 class IllegalInstructionException(Exception):
