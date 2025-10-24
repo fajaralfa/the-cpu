@@ -39,8 +39,6 @@
 | addi | 0x03 | addi x1, #0x00FF | 5, 3, 8 (op, dest, val) | x1 += 0x00FF |
 | add | 0x04 |add x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 + x3 |
 | sub | 0x05 |sub x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 - x3 |
-| mul | 0x06 |mul x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 * x3 |
-| div | 0x07 |div x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 / x3 |
 | rem | 0x08 |rem x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | x1 = x2 % x3 |
 | and | 0x09 |and x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | x1 = x2 & x3 |
 | not | 0x0a |not x1, x2 | 5, 3, 3, 5 (op, dest, src1, pad) | x1 = ~x2 |
