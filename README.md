@@ -2,7 +2,7 @@
 
 ### Register
 
-- Register is 5 bit address that hold 16 bit value
+- Register is 3 bit address that hold 16 bit value
 
 | ABI Name | Register | Description | Register Address |
 | - | - | - | - |
