@@ -1,6 +1,6 @@
 import unittest
 import cpu
-import instruction
+import assembly
 
 class TestLoadProgram(unittest.TestCase):
     def setUp(self):
@@ -261,24 +261,24 @@ class TestRunSimpleProgram(unittest.TestCase):
         # build instruction
         program = build_program([
             # load immediate 0x357F to x1
-            instruction.lui(3, 0x35), # lui x1, 0x35
-            instruction.addi(3, 0x7F), # addi x1, 0x7F
+            assembly.lui(3, 0x35), # lui x1, 0x35
+            assembly.addi(3, 0x7F), # addi x1, 0x7F
 
             # load immediate 0x0034 to x2
-            instruction.addi(4, 0x34), # addi x2, 34
+            assembly.addi(4, 0x34), # addi x2, 34
 
             # add x1 & x2 and store to x1
-            instruction.add(3, 3, 4), # add x1, x1, x2
+            assembly.add(3, 3, 4), # add x1, x1, x2
 
             # store x1 to address 0x00FE
-            instruction.addi(5, 0xFE), # addi x3, 0xFF
-            instruction.sw(3, 5), # sw x1, 0(x3)
+            assembly.addi(5, 0xFE), # addi x3, 0xFF
+            assembly.sw(3, 5), # sw x1, 0(x3)
 
             # load address 0x00FF to x3
-            instruction.lw(5, 5), # lw x3, 0(x3)
+            assembly.lw(5, 5), # lw x3, 0(x3)
 
             # halt
-            instruction.halt(),
+            assembly.halt(),
         ])
 
         self.cpu.load_program(program)
