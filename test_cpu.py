@@ -364,6 +364,20 @@ class TestBranch(TestCaseCPU):
 
         self.cpu.h_branch_equal(operand)
         self.assertEqual(self.cpu.register[PC], current + offset)
+    
+    def test_branch_eq_neg(self):
+        current, offset = 100, 0xFFFC # offset is -4
+        expected = current - 4
+
+        self.cpu.register[PC] = current # program counter
+        self.cpu.register[X1] = 0x23 # X1
+        self.cpu.register[X2] = 0x23 # X2
+        self.cpu.register[X3] = offset # offset addr
+
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
+
+        self.cpu.h_branch_equal(operand)
+        self.assertEqual(self.cpu.register[PC], expected)
 
     def test_branch_not_eq(self):
         current, offset = 100, 0x22
@@ -392,7 +406,7 @@ class TestBranch(TestCaseCPU):
             self.cpu.h_branch_equal(operand)
 
     def test_branch_eq_outofbound(self):
-        current, offset = 0xFFFC, 0x00FF
+        current, offset = 0xFFFC, 0x00FE
 
         self.cpu.register[PC] = current # program counter
         self.cpu.register[X1] = 0x23 # X1
