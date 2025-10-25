@@ -2,6 +2,10 @@ import unittest
 import cpu
 import assembly
 
+class TestCaseCPU(unittest.TestCase):
+    def setUp(self):
+        self.cpu = cpu.CPU()
+
 class TestLoadProgram(unittest.TestCase):
     def setUp(self):
         self.cpu = cpu.CPU()
@@ -316,6 +320,62 @@ class TestSubtract(unittest.TestCase):
         self.cpu.h_sub(operand)
 
         self.assertEqual(self.cpu.register[dest], (2 ** 16) - 2)
+
+
+class TestJump(TestCaseCPU):
+    def test_jump_absolute(self):
+        self.cpu.register[0] = 0 # program counter
+        addr = 0x0F86
+        dest = 3
+        self.cpu.register[dest] = addr
+        operand = (dest << 8)
+        self.cpu.h_jump_absolute(operand)
+        self.assertEqual(self.cpu.register[0], addr)
+
+    def test_jump_absolute_misaligned(self):
+        self.cpu.register[0] = 0 # program counter
+        addr = 0x0F85
+        dest = 3
+        self.cpu.register[dest] = addr
+        operand = (dest << 8)
+        with self.assertRaises(cpu.MisalignedMemoryException):
+            self.cpu.h_jump_absolute(operand)
+
+    def test_jump_absolute_outofbound(self):
+        self.cpu.register[0] = 0 # program counter
+        addr = 0x10002
+        dest = 3
+        self.cpu.register[dest] = addr
+        operand = (dest << 8)
+        with self.assertRaises(cpu.OutOfBoundException):
+            self.cpu.h_jump_absolute(operand)
+
+    def test_jump_relative(self):
+        self.cpu.register[0] = 100 # program counter
+        offset = 20
+        dest = 3
+        self.cpu.register[dest] = offset
+        operand = (dest << 8)
+        self.cpu.h_jump_relative(operand)
+        self.assertEqual(self.cpu.register[0], 100 + offset)
+
+    def test_jump_relative_misaligned(self):
+        self.cpu.register[0] = 100 # program counter
+        offset = 21
+        dest = 3
+        self.cpu.register[dest] = offset
+        operand = (dest << 8)
+        with self.assertRaises(cpu.MisalignedMemoryException):
+            self.cpu.h_jump_relative(operand)
+
+    def test_jump_relative_outofbound(self):
+        self.cpu.register[0] = 0xFFFE # program counter
+        offset = 20
+        dest = 3
+        self.cpu.register[dest] = offset
+        operand = (dest << 8)
+        with self.assertRaises(cpu.OutOfBoundException):
+            self.cpu.h_jump_relative(operand)
 
 
 if __name__ == "__main__":

@@ -123,6 +123,8 @@ class CPU:
     def h_jump_absolute(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
         addr = self.register[dest]
+        if addr >= len(self.memory) - 1:
+            raise OutOfBoundException()
         if addr % 2 != 0:
             raise MisalignedMemoryException()
         self.register[0] = addr
@@ -130,7 +132,13 @@ class CPU:
     def h_jump_relative(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
         offset = self.to_signed_16(self.register[dest])
-        self.register[0] = (self.register[0] + offset) & 0xFFFF
+        addr = (self.register[0] + offset)
+        if addr >= len(self.memory) - 1:
+            raise OutOfBoundException()
+        if addr % 2 != 0:
+            raise MisalignedMemoryException()
+        self.register[0] =  addr
+    
 
 
 class IllegalInstructionException(Exception):
