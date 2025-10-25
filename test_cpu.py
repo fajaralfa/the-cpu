@@ -378,5 +378,63 @@ class TestJump(TestCaseCPU):
             self.cpu.h_jump_relative(operand)
 
 
+class TestBranch(TestCaseCPU):
+    def test_branch_eq(self):
+        current, offset = 100, 0x22
+        dest, src1, src2 = 4, 3, 2
+
+        self.cpu.register[0] = current # program counter
+        self.cpu.register[src1] = 0x23 # src1
+        self.cpu.register[src2] = 0x23 # src2
+        self.cpu.register[dest] = offset # offset addr
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+
+        self.cpu.h_branch_equal(operand)
+        self.assertEqual(self.cpu.register[0], current + offset)
+
+    def test_branch_not_eq(self):
+        current, offset = 100, 0x22
+        dest, src1, src2 = 4, 3, 2
+
+        self.cpu.register[0] = current # program counter
+        self.cpu.register[src1] = 0x20 # src1
+        self.cpu.register[src2] = 0x23 # src2
+        self.cpu.register[dest] = offset # offset addr
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+
+        self.cpu.h_branch_equal(operand)
+        self.assertEqual(self.cpu.register[0], current)
+
+    def test_branch_eq_misaligned(self):
+        current, offset = 100, 0x23
+        dest, src1, src2 = 4, 3, 2
+
+        self.cpu.register[0] = current # program counter
+        self.cpu.register[src1] = 0x23 # src1
+        self.cpu.register[src2] = 0x23 # src2
+        self.cpu.register[dest] = offset # offset addr
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+
+        with self.assertRaises(cpu.MisalignedMemoryException):
+            self.cpu.h_branch_equal(operand)
+
+    def test_branch_eq_outofbound(self):
+        current, offset = 0xFFFC, 0x00FF
+        dest, src1, src2 = 4, 3, 2
+
+        self.cpu.register[0] = current # program counter
+        self.cpu.register[src1] = 0x23 # src1
+        self.cpu.register[src2] = 0x23 # src2
+        self.cpu.register[dest] = offset # offset addr
+
+        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+
+        with self.assertRaises(cpu.OutOfBoundException):
+            self.cpu.h_branch_equal(operand)
+
+
 if __name__ == "__main__":
     unittest.main()

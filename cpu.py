@@ -139,6 +139,17 @@ class CPU:
             raise MisalignedMemoryException()
         self.register[0] =  addr
     
+    def h_branch_equal(self, operand):
+        dest = (operand >> 8) & ((1 << 3) - 1)
+        src1 = (operand >> 5) & ((1 << 3) - 1)
+        src2 = (operand >> 2) & ((1 << 3) - 1)
+        addr = self.register[0] + self.register[dest]
+        if self.register[src1] == self.register[src2]:
+            if addr >= len(self.memory) - 1:
+                raise OutOfBoundException()
+            if addr % 2 != 0:
+                raise MisalignedMemoryException()
+            self.register[0] = addr
 
 
 class IllegalInstructionException(Exception):
