@@ -1,5 +1,6 @@
 import unittest
 import cpu
+from cpu import PC, X1, X2, X3
 import assembly
 
 class TestCaseCPU(unittest.TestCase):
@@ -101,29 +102,27 @@ class TestLoadImmediate(unittest.TestCase):
         self.cpu = cpu.CPU()
 
     def test_load_upper_immediate(self):
-        register_dest = 4
         value = 0xC2
-        operand = (register_dest << 8) | value
+        operand = (X1 << 8) | value
         self.cpu.h_load_upper_immediate(operand)
-        self.assertEqual(self.cpu.register[register_dest], value << 8)
+        self.assertEqual(self.cpu.register[X1], value << 8)
     
     def test_add_immediate(self):
-        register_dest = 5
         value = 0x12
-        operand = (register_dest << 8) | value
+        operand = (X2 << 8) | value
         self.cpu.h_add_immediate(operand)
-        self.assertEqual(self.cpu.register[register_dest], value)
+        self.assertEqual(self.cpu.register[X2], value)
 
     def test_load_full_immediate(self):
-        register_dest = 5
+        X2 = 5
         value = 0x12CA
         high_value = 0x12
         low_value = 0xCA
-        operand_upper = (register_dest << 8) | high_value
-        operand_lower = (register_dest << 8) | low_value
+        operand_upper = (X2 << 8) | high_value
+        operand_lower = (X2 << 8) | low_value
         self.cpu.h_load_upper_immediate(operand_upper)
         self.cpu.h_add_immediate(operand_lower)
-        self.assertEqual(self.cpu.register[register_dest], value)
+        self.assertEqual(self.cpu.register[X2], value)
 
 
 class TestAddImmediate(unittest.TestCase):
@@ -131,23 +130,22 @@ class TestAddImmediate(unittest.TestCase):
         self.cpu = cpu.CPU()
     
     def test_add(self):
-        register_dest = 4
         value = 0xEA
-        operand = (register_dest << 8) | value
+        operand = (X1 << 8) | value
         self.cpu.h_add_immediate(operand)
-        self.assertEqual(self.cpu.register[register_dest], value)
+        self.assertEqual(self.cpu.register[X1], value)
 
     def test_add_overflow(self):
-        register_dest = 5
+        X2 = 5
         value = 0xFF
-        operand = (register_dest << 8) | value
+        operand = (X2 << 8) | value
         self.cpu.h_load_upper_immediate(operand)
         self.cpu.h_add_immediate(operand)
         # actual overflow
         value = 0x11
-        operand = (register_dest << 8) | value
+        operand = (X2 << 8) | value
         self.cpu.h_add_immediate(operand)
-        self.assertEqual(self.cpu.register[register_dest], value)
+        self.assertEqual(self.cpu.register[X2], value)
 
 
 class TestLoadStoreWord(unittest.TestCase):
@@ -155,8 +153,6 @@ class TestLoadStoreWord(unittest.TestCase):
         self.cpu = cpu.CPU()
 
     def test_load_word(self):
-        register_dest = 4
-        register_base = 5
         base_addr = 10
         offset = 2
 
@@ -166,53 +162,47 @@ class TestLoadStoreWord(unittest.TestCase):
         self.cpu.memory[base_addr + offset + 1] = (value >> 8) & 0xFF
 
         # mock register value to base_addr
-        self.cpu.register[register_base] = base_addr
+        self.cpu.register[X2] = base_addr
 
-        operand = (register_dest << 8) | (register_base << 5) | offset
+        operand = (X1 << 8) | (X2 << 5) | offset
 
         self.cpu.h_load_word(operand)
-        self.assertEqual(self.cpu.register[register_dest], value)
+        self.assertEqual(self.cpu.register[X1], value)
 
     def test_load_word_misaligned(self):
-        register_dest = 4
-        register_base = 5
         base_addr = 11
         offset = 0
 
         # mock register value to base_addr
-        self.cpu.register[register_base] = base_addr
+        self.cpu.register[X2] = base_addr
 
-        operand = (register_dest << 8) | (register_base << 5) | offset
+        operand = (X1 << 8) | (X2 << 5) | offset
 
         with self.assertRaises(cpu.MisalignedMemoryException):
             self.cpu.h_load_word(operand)
         
     def test_store_word(self):
         # set register_src value to 12345
-        # store register_src value to memory address at register_base + offset
+        # store register_src value to memory address at X2 + offset
         value = 12345
-        register_src = 3
-        register_base = 4
         base_addr = 20
         offset = 0
 
-        self.cpu.register[register_src] = value
-        self.cpu.register[register_base] = base_addr
+        self.cpu.register[X1] = value
+        self.cpu.register[X2] = base_addr
 
-        operand = (register_src << 8) | (register_base << 5) | offset
+        operand = (X1 << 8) | (X2 << 5) | offset
         self.cpu.h_store_word(operand)
         
         self.assertEqual(self.cpu.fetch_word(base_addr), value)
 
     def test_store_word_misaligned(self):
-        register_src = 3
-        register_base = 4
         base_addr = 21
         offset = 0
 
         # reset register value from previous test
-        self.cpu.register[register_base] = base_addr
-        operand = (register_src << 8) | (register_base << 5) | offset
+        self.cpu.register[X2] = base_addr
+        operand = (X1 << 8) | (X2 << 5) | offset
         with self.assertRaises(cpu.MisalignedMemoryException):
             self.cpu.h_store_word(operand)
 
@@ -222,30 +212,24 @@ class TestAdd(unittest.TestCase):
         self.cpu = cpu.CPU()
 
     def test_add(self):
-        dest = 3
-        src1 = 3
-        src2 = 4
-        self.cpu.register[src1] = 0xFA9
-        self.cpu.register[src2] = 0xF010
-        result = self.cpu.register[src1] + self.cpu.register[src2]
+        self.cpu.register[X1] = 0xFA9
+        self.cpu.register[X2] = 0xF010
+        result = self.cpu.register[X1] + self.cpu.register[X2]
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
         self.cpu.h_add(operand)
 
-        self.assertEqual(self.cpu.register[dest], result)
+        self.assertEqual(self.cpu.register[X3], result)
 
     def test_add_wrap_around(self):
-        dest = 3
-        src1 = 3
-        src2 = 4
-        self.cpu.register[src1] = 0xFFFF
-        self.cpu.register[src2] = 20
-        result = self.cpu.register[src1] + self.cpu.register[src2]
+        self.cpu.register[X1] = 0xFFFF
+        self.cpu.register[X2] = 20
+        result = self.cpu.register[X1] + self.cpu.register[X2]
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
         self.cpu.h_add(operand)
 
-        self.assertEqual(self.cpu.register[dest], 19)
+        self.assertEqual(self.cpu.register[X3], 19)
 
 
 def build_program(instructions):
@@ -296,84 +280,73 @@ class TestSubtract(unittest.TestCase):
         self.cpu = cpu.CPU()
 
     def test_subtract(self):
-        dest = 3
-        src1 = 4
-        src2 = 3
         # set register value
-        self.cpu.register[src1] = 451
-        self.cpu.register[src2] = 51
+        self.cpu.register[X1] = 451
+        self.cpu.register[X2] = 51
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
         self.cpu.h_sub(operand)
 
-        self.assertEqual(self.cpu.register[dest], 400)
+        self.assertEqual(self.cpu.register[X3], 400)
     
     def test_subtract_wrap_around(self):
-        dest = 3
-        src1 = 4
-        src2 = 3
         # set register value
-        self.cpu.register[src1] = 10
-        self.cpu.register[src2] = 12
+        self.cpu.register[X1] = 10
+        self.cpu.register[X2] = 12
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
         self.cpu.h_sub(operand)
 
-        self.assertEqual(self.cpu.register[dest], (2 ** 16) - 2)
+        self.assertEqual(self.cpu.register[X3], (2 ** 16) - 2)
 
 
 class TestJump(TestCaseCPU):
     def test_jump_absolute(self):
-        self.cpu.register[0] = 0 # program counter
+        self.cpu.register[PC] = 0 # program counter
         addr = 0x0F86
-        dest = 3
-        self.cpu.register[dest] = addr
-        operand = (dest << 8)
+        self.cpu.register[X3] = addr
+        operand = (X3 << 8)
         self.cpu.h_jump_absolute(operand)
-        self.assertEqual(self.cpu.register[0], addr)
+        self.assertEqual(self.cpu.register[PC], addr)
 
     def test_jump_absolute_misaligned(self):
-        self.cpu.register[0] = 0 # program counter
+        self.cpu.register[PC] = 0 # program counter
         addr = 0x0F85
-        dest = 3
-        self.cpu.register[dest] = addr
-        operand = (dest << 8)
+        self.cpu.register[X3] = addr
+        operand = (X3 << 8)
         with self.assertRaises(cpu.MisalignedMemoryException):
             self.cpu.h_jump_absolute(operand)
 
     def test_jump_absolute_outofbound(self):
-        self.cpu.register[0] = 0 # program counter
+        self.cpu.register[PC] = 0 # program counter
         addr = 0x10002
-        dest = 3
-        self.cpu.register[dest] = addr
-        operand = (dest << 8)
+        self.cpu.register[X3] = addr
+        operand = (X3 << 8)
         with self.assertRaises(cpu.OutOfBoundException):
             self.cpu.h_jump_absolute(operand)
 
     def test_jump_relative(self):
-        self.cpu.register[0] = 100 # program counter
+        self.cpu.register[PC] = 100 # program counter
         offset = 20
-        dest = 3
-        self.cpu.register[dest] = offset
-        operand = (dest << 8)
+        self.cpu.register[X3] = offset
+        operand = (X3 << 8)
         self.cpu.h_jump_relative(operand)
-        self.assertEqual(self.cpu.register[0], 100 + offset)
+        self.assertEqual(self.cpu.register[PC], 100 + offset)
 
     def test_jump_relative_misaligned(self):
-        self.cpu.register[0] = 100 # program counter
+        self.cpu.register[PC] = 100 # program counter
         offset = 21
-        dest = 3
-        self.cpu.register[dest] = offset
-        operand = (dest << 8)
+        self.cpu.register[X3] = offset
+        operand = (X3 << 8)
         with self.assertRaises(cpu.MisalignedMemoryException):
             self.cpu.h_jump_relative(operand)
 
     def test_jump_relative_outofbound(self):
-        self.cpu.register[0] = 0xFFFE # program counter
+        self.cpu.register[PC] = 0xFFFE # program counter
         offset = 20
-        dest = 3
-        self.cpu.register[dest] = offset
-        operand = (dest << 8)
+        X3 = 3
+        self.cpu.register[X3] = offset
+        operand = (X3 << 8)
         with self.assertRaises(cpu.OutOfBoundException):
             self.cpu.h_jump_relative(operand)
 
@@ -381,56 +354,52 @@ class TestJump(TestCaseCPU):
 class TestBranch(TestCaseCPU):
     def test_branch_eq(self):
         current, offset = 100, 0x22
-        dest, src1, src2 = 4, 3, 2
 
-        self.cpu.register[0] = current # program counter
-        self.cpu.register[src1] = 0x23 # src1
-        self.cpu.register[src2] = 0x23 # src2
-        self.cpu.register[dest] = offset # offset addr
+        self.cpu.register[PC] = current # program counter
+        self.cpu.register[X1] = 0x23 # X1
+        self.cpu.register[X2] = 0x23 # X2
+        self.cpu.register[X3] = offset # offset addr
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
 
         self.cpu.h_branch_equal(operand)
-        self.assertEqual(self.cpu.register[0], current + offset)
+        self.assertEqual(self.cpu.register[PC], current + offset)
 
     def test_branch_not_eq(self):
         current, offset = 100, 0x22
-        dest, src1, src2 = 4, 3, 2
 
-        self.cpu.register[0] = current # program counter
-        self.cpu.register[src1] = 0x20 # src1
-        self.cpu.register[src2] = 0x23 # src2
-        self.cpu.register[dest] = offset # offset addr
+        self.cpu.register[PC] = current # program counter
+        self.cpu.register[X1] = 0x20 # X1
+        self.cpu.register[X2] = 0x23 # X2
+        self.cpu.register[X3] = offset # offset addr
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
 
         self.cpu.h_branch_equal(operand)
-        self.assertEqual(self.cpu.register[0], current)
+        self.assertEqual(self.cpu.register[PC], current)
 
     def test_branch_eq_misaligned(self):
         current, offset = 100, 0x23
-        dest, src1, src2 = 4, 3, 2
 
-        self.cpu.register[0] = current # program counter
-        self.cpu.register[src1] = 0x23 # src1
-        self.cpu.register[src2] = 0x23 # src2
-        self.cpu.register[dest] = offset # offset addr
+        self.cpu.register[PC] = current # program counter
+        self.cpu.register[X1] = 0x23 # X1
+        self.cpu.register[X2] = 0x23 # X2
+        self.cpu.register[X3] = offset # offset addr
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
 
         with self.assertRaises(cpu.MisalignedMemoryException):
             self.cpu.h_branch_equal(operand)
 
     def test_branch_eq_outofbound(self):
         current, offset = 0xFFFC, 0x00FF
-        dest, src1, src2 = 4, 3, 2
 
-        self.cpu.register[0] = current # program counter
-        self.cpu.register[src1] = 0x23 # src1
-        self.cpu.register[src2] = 0x23 # src2
-        self.cpu.register[dest] = offset # offset addr
+        self.cpu.register[PC] = current # program counter
+        self.cpu.register[X1] = 0x23 # X1
+        self.cpu.register[X2] = 0x23 # X2
+        self.cpu.register[X3] = offset # offset addr
 
-        operand = (dest << 8) | (src1 << 5) | (src2 << 2)
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
 
         with self.assertRaises(cpu.OutOfBoundException):
             self.cpu.h_branch_equal(operand)

@@ -1,3 +1,12 @@
+PC = 0
+SP = 1
+X1 = 2
+X2 = 3
+X3 = 4
+MEPC = 5
+MCAUSE = 6
+MTVEC = 7
+
 class CPU:
     def __init__(self):
         self.running = True
@@ -18,7 +27,7 @@ class CPU:
     def load_program(self, program: list, start_address=0xC000):
         if start_address + len(program) > len(self.memory):
             raise OutOfBoundException()
-        self.register[0] = start_address
+        self.register[PC] = start_address
         self.memory[start_address:(start_address + len(program))] = program
         pass
 
@@ -44,10 +53,10 @@ class CPU:
         return word
 
     def fetch(self):
-        address = self.register[0]
+        address = self.register[PC]
         if address >= len(self.memory) - 1:
             raise OutOfBoundException()
-        self.register[0] += 2
+        self.register[PC] += 2
         return self.fetch_word(address)
     
     def decode(self, instruction):
@@ -63,7 +72,7 @@ class CPU:
             return value
 
     def debug_state(self):
-        print(f"PC: {self.register[0]:04X}, ", end="")
+        print(f"PC: {self.register[PC]:04X}, ", end="")
         for i in range(3, 6):
             print(f"R{i}: {self.register[i]:04X}, ", end="")
         print(f"SR: {self.register[1]:04b}")
@@ -127,29 +136,29 @@ class CPU:
             raise OutOfBoundException()
         if addr % 2 != 0:
             raise MisalignedMemoryException()
-        self.register[0] = addr
+        self.register[PC] = addr
 
     def h_jump_relative(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
         offset = self.to_signed_16(self.register[dest])
-        addr = (self.register[0] + offset)
+        addr = (self.register[PC] + offset)
         if addr >= len(self.memory) - 1:
             raise OutOfBoundException()
         if addr % 2 != 0:
             raise MisalignedMemoryException()
-        self.register[0] =  addr
+        self.register[PC] =  addr
     
     def h_branch_equal(self, operand):
         dest = (operand >> 8) & ((1 << 3) - 1)
         src1 = (operand >> 5) & ((1 << 3) - 1)
         src2 = (operand >> 2) & ((1 << 3) - 1)
-        addr = self.register[0] + self.register[dest]
+        addr = self.register[PC] + self.register[dest]
         if self.register[src1] == self.register[src2]:
             if addr >= len(self.memory) - 1:
                 raise OutOfBoundException()
             if addr % 2 != 0:
                 raise MisalignedMemoryException()
-            self.register[0] = addr
+            self.register[PC] = addr
 
 
 class IllegalInstructionException(Exception):
