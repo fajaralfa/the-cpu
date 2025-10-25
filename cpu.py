@@ -66,7 +66,7 @@ class CPU:
     
     def to_signed_16(self, value):
         value &= 0xFFFF
-        if value & 8000:
+        if value & 0x8000:
             return value - 0x10000
         else:
             return value
