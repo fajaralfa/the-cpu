@@ -14,6 +14,7 @@ class CPU:
         self.memory = [0] * (2 ** 16)
         self.handler = [None] * (2 ** 5)
         handler = [
+                None,
                 self.h_load_word,
                 self.h_store_word,
                 self.h_load_upper_immediate,
@@ -22,6 +23,12 @@ class CPU:
                 self.h_sub,
         ]
         self.handler[0:len(handler)] = handler
+        self.handler[0x11:0x15] = [
+                self.h_jump_absolute,
+                self.h_jump_relative,
+                self.h_branch_equal,
+                self.h_branch_not_equal,
+        ]
         self.handler[-1] = self.h_halt
 
     def load_program(self, program: list, start_address=0xC000):
@@ -39,8 +46,9 @@ class CPU:
             if handler is not None:
                 handler(operand)
             else:
-                raise IllegalInstructionException()
-            self.debug_state()
+                raise IllegalInstructionException(f"opcode: {opcode}, pc: {self.register[PC]}, x3: {self.register[X3]}")
+            if __name__ == "__main__":
+                self.debug_state()
 
     def fetch_word(self, address):
         if address % 2 != 0:
