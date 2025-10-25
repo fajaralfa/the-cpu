@@ -370,7 +370,7 @@ class TestBranch(TestCaseCPU):
         self.cpu.h_branch_equal(operand)
         self.assertEqual(self.cpu.register[PC], expected)
 
-    def test_branch_not_eq(self):
+    def test_branch_eq_not(self):
         current, offset = 100, 0x22
 
         self.cpu.register[PC] = current # program counter
