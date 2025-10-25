@@ -409,6 +409,21 @@ class TestBranch(TestCaseCPU):
         with self.assertRaises(cpu.OutOfBoundException):
             self.cpu.h_branch_equal(operand)
 
+    def test_branch_not_eq(self):
+        current, offset = 100, 0x22
+
+        self.cpu.register[PC] = current # program counter
+        self.cpu.register[X1] = 0x23 # X1
+        self.cpu.register[X2] = 0x25 # X2
+        self.cpu.register[X3] = offset # offset addr
+
+        operand = (X3 << 8) | (X1 << 5) | (X2 << 2)
+
+        self.cpu.h_branch_not_equal(operand)
+        self.assertEqual(self.cpu.register[PC], current + offset)
+        # it's literally the same as branch_equal except it use not equal operator for comparing value
+        # should i even add this notes?
+
 
 if __name__ == "__main__":
     unittest.main()
