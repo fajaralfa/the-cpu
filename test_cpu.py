@@ -425,5 +425,68 @@ class TestBranch(TestCaseCPU):
         # should i even add this notes?
 
 
+class TestProgramJumpAndBranch(TestCaseCPU):
+    def test_jump(self):
+        # 1. jump to instruction 4
+        # 2. load a number to X1
+        # 3. load a number to X2
+        # 4. add X1 and X2, store to X3
+        # make sure X3 always 0
+        program = assembly.build_program([
+            assembly.addi(X3, 4),
+            assembly.jr(X3),
+            assembly.addi(X1, 12),
+            assembly.addi(X2, 34),
+            assembly.add(X3, X1, X2),
+            assembly.halt(),
+        ])
+        self.cpu.load_program(program)
+        self.cpu.run_program()
+        self.assertEqual(self.cpu.register[X1], 0)
+        self.assertEqual(self.cpu.register[X2], 0)
+        self.assertEqual(self.cpu.register[X3], 0)
+
+    def test_branch(self):
+        # 1. load a number to X1
+        # 2. if X1 == 0x100 set X2 to 0xFF00 else 0xAA00
+        program = assembly.build_program([
+            assembly.addi(X1, 0x100),
+            assembly.addi(X2, 0x100),
+
+            # reset first then set the if addr
+            assembly.sub(X3, X3, X3),
+            assembly.addi(X3, 6),
+
+            # jump to if block
+            assembly.beq(X3, X1, X2),
+
+            # reset first then set the else addr
+            assembly.sub(X3, X3, X3),
+            assembly.addi(X3, 10),
+            
+            # jump to else block
+            assembly.bne(X3, X1, X2),
+
+            # if block
+            assembly.sub(X2, X2, X2),
+            assembly.lui(X2, 0xFF),
+            assembly.sub(X1, X1, X1),
+            assembly.addi(X1, 10),
+            assembly.jr(X1),
+
+            # else block
+            assembly.sub(X2, X2, X2),
+            assembly.lui(X2, 0xAA),
+            assembly.sub(X1, X1, X1),
+            assembly.addi(X1, 0),
+            assembly.jr(X1),
+
+            assembly.halt(),
+        ])
+        self.cpu.load_program(program)
+        self.cpu.run_program()
+        self.assertEqual(self.cpu.register[X2], 0xFF00)
+
+
 if __name__ == "__main__":
     unittest.main()
