@@ -48,6 +48,6 @@
 | sra | 0x0f |sra x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | x1 = x2 >>> x3 |
 | ja | 0x10 | ja x1 | 5, 3, 8 (op, dest, pad) | PC = x1 |
 | jr | 0x11 | jr x1 | 5, 3, 8 (op, dest, pad) | PC += x1 |
-| beq | 0x12 |beq x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 == x3) PC = x1 |
-| bne | 0x13 |bne x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 != x3) PC = x1 |
+| beq | 0x12 |beq x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 == x3) PC += x1 |
+| bne | 0x13 |bne x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 != x3) PC += x1 |
 | halt | 0x1f | halt | 5, 11 (op, pad) | stop cpu |
