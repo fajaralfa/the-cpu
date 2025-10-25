@@ -94,8 +94,15 @@ class TestHalt(unittest.TestCase):
     def test_halt(self):
         self.cpu.running = True
         self.cpu.h_halt(0)
-        self.cpu.running = False
+        self.assertEqual(self.cpu.running, False)
 
+
+class TestIllegalInstruction(TestCaseCPU):
+    def test_illegal(self):
+        program = [0]
+        self.cpu.load_program(program)
+        with self.assertRaises(cpu.IllegalInstructionException):
+            self.cpu.run_program()
 
 class TestLoadImmediate(unittest.TestCase):
     def setUp(self):

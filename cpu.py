@@ -46,9 +46,8 @@ class CPU:
             if handler is not None:
                 handler(operand)
             else:
-                raise IllegalInstructionException(f"opcode: {opcode}, pc: {self.register[PC]}, x3: {self.register[X3]}")
-            if __name__ == "__main__":
-                self.debug_state()
+                raise IllegalInstructionException(opcode, instruction, self.register.copy())
+            self.debug_state()
 
     def fetch_word(self, address):
         if address % 2 != 0:
@@ -183,11 +182,21 @@ class CPU:
             self.register[PC] = addr
 
 
-class IllegalInstructionException(Exception):
+class CPUException(Exception):
     pass
-class SegFaultException(Exception):
+class IllegalInstructionException(CPUException):
+    def __init__(self, opcode, instruction, registers):
+        message = (
+            f"Exception: \n"
+            f"opcode: {opcode}"
+            f"instruction: {instruction}"
+            f"registers: {registers}"
+        )
+        super().__init__(message)
     pass
-class OutOfBoundException(Exception):
+class SegFaultException(CPUException):
     pass
-class MisalignedMemoryException(Exception):
+class OutOfBoundException(CPUException):
+    pass
+class MisalignedMemoryException(CPUException):
     pass
