@@ -1,3 +1,12 @@
+def build_program(instructions):
+    program = []
+    for i in instructions:
+        low = i & 0xFF
+        high = (i >> 8) & 0xFF
+        program.append(low)
+        program.append(high)
+    return program
+
 def halt():
     return (0xFF << 11)
 

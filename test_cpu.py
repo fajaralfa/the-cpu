@@ -232,22 +232,13 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(self.cpu.register[X3], 19)
 
 
-def build_program(instructions):
-    program = []
-    for i in instructions:
-        low = i & 0xFF
-        high = (i >> 8) & 0xFF
-        program.append(low)
-        program.append(high)
-    return program
-
 class TestRunSimpleProgram(unittest.TestCase):
     def setUp(self):
         self.cpu = cpu.CPU()
 
     def test_run(self):
         # build instruction
-        program = build_program([
+        program = assembly.build_program([
             # load immediate 0x357F to x1
             assembly.lui(3, 0x35), # lui x1, 0x35
             assembly.addi(3, 0x7F), # addi x1, 0x7F
