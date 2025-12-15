@@ -2,59 +2,79 @@ const std = @import("std");
 const zig = @import("zig");
 
 pub fn main() !void {
-    var cpu: CPU = CPU{};
-    const program = [_]u8{ 1, 2, 3 };
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    const program = [_]u8{
+        0, (2 << 3), // load
+        0, (1 << 3), // halt
+    };
     try cpu.loadProgram(&program);
     try cpu.runProgram();
 }
 
 const CPUError = error{
-    OutOfBound,
+    OutOfBounds,
     InvalidInstruction,
+    MemoryTooLarge,
 };
 
 const register_count = 6;
-const max_memory = 1 << 16;
+const max_memory: u32 = 1 << 16;
 
 const CPU = struct {
-    running: bool = false,
-    register: [register_count]u16 = .{0} ** register_count,
-    memory: [max_memory]u8 = .{0} ** max_memory,
-    handler: [31]*const fn (*CPU, u16) CPUError!void = .{invalid} ** 31,
-    start_addr: u16 = max_memory / 2,
+    running: bool,
+    register: [register_count]u16,
+    memory: []u8,
+    start_prog: u16,
+    handler: [32]*const fn (*CPU, u16) CPUError!void,
 
-    pub fn init() CPU {
-        var cpu = CPU{};
+    pub fn init(memory: []u8) CPUError!CPU {
+        if (memory.len > max_memory) {
+            return CPUError.MemoryTooLarge;
+        }
+
+        var cpu = CPU{
+            .register = .{0} ** register_count,
+            .running = false,
+            .memory = memory,
+            .start_prog = @intCast(memory.len / 2),
+            .handler = .{invalid} ** 32,
+        };
         cpu.handler[1] = halt;
         cpu.handler[2] = loadi;
         return cpu;
     }
 
     pub fn loadProgram(self: *CPU, program: []const u8) CPUError!void {
-        if (program.len > (max_memory - @as(u32, self.start_addr))) {
-            return CPUError.OutOfBound;
+        if (program.len > (max_memory - self.start_prog)) {
+            return CPUError.OutOfBounds;
         }
-        for (program, self.start_addr..) |byte, addr| {
+        for (program, self.start_prog..) |byte, addr| {
             self.memory[addr] = byte;
         }
     }
 
     pub fn runProgram(self: *CPU) CPUError!void {
         self.running = true;
-        self.register[0] = self.start_addr;
+        self.register[0] = self.start_prog;
         while (self.running) {
-            const instr = self.fetchInstr();
+            const instr = try self.fetchInstr();
             try self.execInstr(instr);
         }
     }
 
-    fn fetchInstr(self: *CPU) u16 {
+    fn fetchInstr(self: *CPU) CPUError!u16 {
         const addr = self.register[0];
+
+        if (addr + 1 >= self.memory.len) {
+            return CPUError.OutOfBounds;
+        }
+
         const lo = self.memory[addr];
         const hi = self.memory[addr + 1];
-        const instr: u16 = (@as(u16, hi) << 8) | lo;
         self.register[0] += 2;
-        return instr;
+
+        return (@as(u16, hi) << 8) | lo;
     }
 
     fn execInstr(self: *CPU, instr: u16) CPUError!void {
@@ -85,23 +105,26 @@ const CPU = struct {
 };
 
 test "Test load program" {
-    var cpu: CPU = CPU.init();
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
     const program = [_]u8{ 2, 2, 1 };
     try cpu.loadProgram(&program);
-    try std.testing.expect(cpu.memory[cpu.start_addr] == program[0]);
-    try std.testing.expect(cpu.memory[cpu.start_addr + 1] == program[1]);
-    try std.testing.expect(cpu.memory[cpu.start_addr + 2] == program[2]);
+    try std.testing.expect(cpu.memory[cpu.start_prog] == program[0]);
+    try std.testing.expect(cpu.memory[cpu.start_prog + 1] == program[1]);
+    try std.testing.expect(cpu.memory[cpu.start_prog + 2] == program[2]);
 }
 
 test "Test load program out of bound" {
-    var cpu: CPU = CPU.init();
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
     const start_addr: usize = max_memory / 2;
     const program = [_]u8{3} ** (start_addr + 1);
-    try std.testing.expectError(CPUError.OutOfBound, cpu.loadProgram(&program));
+    try std.testing.expectError(CPUError.OutOfBounds, cpu.loadProgram(&program));
 }
 
 test "Test run program" {
-    var cpu: CPU = CPU.init();
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
     const program = [_]u8{
         0, (2 << 3), // load
         0, (1 << 3), // halt
