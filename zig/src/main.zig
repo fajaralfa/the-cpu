@@ -20,8 +20,15 @@ const CPU = struct {
     running: bool = false,
     register: [register_count]u16 = .{0} ** register_count,
     memory: [max_memory]u8 = .{0} ** max_memory,
-    handler: [31]*const fn (u16) CPUError!void = .{invalid} ** 31,
+    handler: [31]*const fn (*CPU, u16) CPUError!void = .{invalid} ** 31,
     start_addr: u16 = max_memory / 2,
+
+    pub fn init() CPU {
+        var cpu = CPU{};
+        cpu.handler[1] = halt;
+        cpu.handler[2] = loadi;
+        return cpu;
+    }
 
     pub fn loadProgram(self: *CPU, program: []const u8) CPUError!void {
         if (program.len > (max_memory - @as(u32, self.start_addr))) {
@@ -52,19 +59,34 @@ const CPU = struct {
 
     fn execInstr(self: *CPU, instr: u16) CPUError!void {
         const opcode = (instr >> 11);
+        std.log.info("opcode {}", .{opcode});
         const handler = self.handler[opcode];
-        try handler(instr);
+        try handler(self, instr);
+    }
+
+    fn invalid(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("invalid instruction dispatched!", .{});
+        _ = self;
+        _ = instr;
+        return CPUError.InvalidInstruction;
+    }
+
+    fn loadi(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("loadi instruction dispatched!", .{});
+        _ = self;
+        _ = instr;
+    }
+
+    fn halt(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("halt instruction dispatched!", .{});
+        _ = instr;
+        self.running = false;
     }
 };
 
-fn invalid(instr: u16) CPUError!void {
-    _ = instr;
-    return CPUError.InvalidInstruction;
-}
-
 test "Test load program" {
-    var cpu: CPU = CPU{};
-    const program = [_]u8{ 1, 2, 3 };
+    var cpu: CPU = CPU.init();
+    const program = [_]u8{ 2, 2, 1 };
     try cpu.loadProgram(&program);
     try std.testing.expect(cpu.memory[cpu.start_addr] == program[0]);
     try std.testing.expect(cpu.memory[cpu.start_addr + 1] == program[1]);
@@ -72,15 +94,18 @@ test "Test load program" {
 }
 
 test "Test load program out of bound" {
-    var cpu: CPU = CPU{};
+    var cpu: CPU = CPU.init();
     const start_addr: usize = max_memory / 2;
     const program = [_]u8{3} ** (start_addr + 1);
     try std.testing.expectError(CPUError.OutOfBound, cpu.loadProgram(&program));
 }
 
 test "Test run program" {
-    var cpu: CPU = CPU{};
-    const program = [_]u8{ 1, 2, 3 };
+    var cpu: CPU = CPU.init();
+    const program = [_]u8{
+        0, (2 << 3), // load
+        0, (1 << 3), // halt
+    };
     try cpu.loadProgram(&program);
     try cpu.runProgram();
     try std.testing.expect(true);
