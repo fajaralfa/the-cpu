@@ -6,7 +6,7 @@ pub const CPUError = error{
     MemoryTooLarge,
 };
 
-pub const register_count = 6;
+pub const register_count = 8;
 pub const max_memory: u32 = 1 << 16;
 
 pub const CPU = struct {
