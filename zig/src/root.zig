@@ -28,8 +28,9 @@ pub const CPU = struct {
             .start_prog = @intCast(memory.len / 2),
             .handler = .{invalid} ** 32,
         };
-        cpu.handler[1] = halt;
-        cpu.handler[2] = loadi;
+        cpu.handler[31] = halt;
+        cpu.handler[2] = lui;
+        cpu.handler[3] = addi;
         return cpu;
     }
 
@@ -66,9 +67,11 @@ pub const CPU = struct {
     }
 
     fn execInstr(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("instr {b}", .{instr});
         const opcode = (instr >> 11);
         std.log.info("opcode {}", .{opcode});
         const handler = self.handler[opcode];
+        std.log.info("instr: {b}", .{instr});
         try handler(self, instr);
     }
 
@@ -79,23 +82,33 @@ pub const CPU = struct {
         return CPUError.InvalidInstruction;
     }
 
-    fn loadi(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("loadi instruction dispatched!", .{});
-        _ = self;
-        _ = instr;
-    }
-
     fn halt(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("halt instruction dispatched!", .{});
+        std.log.info("halt dispatched!", .{});
         _ = instr;
         self.running = false;
+    }
+
+    fn lui(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("lui dispatched!", .{});
+        const dest = (instr >> 8) & ((1 << 3) - 1);
+        const imm = instr & 0xFFFF;
+        self.register[dest] = imm << 8;
+    }
+
+    fn addi(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("addi dispatched!", .{});
+        const dest = (instr >> 8) & ((1 << 3) - 1);
+        const src = (instr >> 5) & ((1 << 3) - 1);
+        const imm = (instr) & ((1 << 5) - 1);
+        std.log.info("dest {}, src {}, imm {}", .{ dest, src, imm });
+        self.register[dest] = self.register[src] + imm;
     }
 };
 
 test "Test load program" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
-    const program = [_]u8{ 2, 2, 1 };
+    const program = [_]u8{ 2, 2, 31 };
     try cpu.loadProgram(&program);
     try std.testing.expect(cpu.memory[cpu.start_prog] == program[0]);
     try std.testing.expect(cpu.memory[cpu.start_prog + 1] == program[1]);
@@ -114,10 +127,37 @@ test "Test run program" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     const program = [_]u8{
-        0, (2 << 3), // load
-        0, (1 << 3), // halt
+        0, (2 << 3) | 1, // load r1, 0
+        0, (31 << 3), // halt
     };
     try cpu.loadProgram(&program);
     try cpu.runProgram();
     try std.testing.expect(true);
+}
+
+test "Test lui" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    try cpu.lui((1 << 8) | 0xFF);
+
+    try std.testing.expect(cpu.register[1] == 0xFF00);
+}
+
+test "Test addi" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0xFF00;
+
+    // just so you know
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x1F));
+    try cpu.addi((1 << 8) | (1 << 5) | (0x7));
+
+    try std.testing.expect(cpu.register[1] == 0xFFFF);
 }
