@@ -93,7 +93,7 @@ pub const CPU = struct {
     fn lui(self: *CPU, instr: u16) CPUError!void {
         std.log.info("lui dispatched!", .{});
         const dest = (instr >> 8) & ((1 << 3) - 1);
-        const imm = instr & 0xFFFF;
+        const imm = instr & 0xFF;
         self.register[dest] = imm << 8;
     }
 
