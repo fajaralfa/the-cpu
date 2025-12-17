@@ -84,40 +84,39 @@ pub const CPU = struct {
         return CPUError.InvalidInstruction;
     }
 
-    fn halt(self: *CPU, instr: u16) CPUError!void {
+    fn halt(self: *CPU, _: u16) CPUError!void {
         std.log.info("halt dispatched!", .{});
-        _ = instr;
         self.running = false;
     }
 
     fn lui(self: *CPU, instr: u16) CPUError!void {
         std.log.info("lui dispatched!", .{});
-        const dest = (instr >> 8) & ((1 << 3) - 1);
-        const imm = instr & 0xFF;
-        self.register[dest] = imm << 8;
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const imm: u16 = @intCast(instr & 0xFF); // casting this to u8 throws:
+        self.register[dest] = imm << 8; // type 'u3' cannot represent integer value '8'
     }
 
     fn addi(self: *CPU, instr: u16) CPUError!void {
         std.log.info("addi dispatched!", .{});
-        const dest = (instr >> 8) & ((1 << 3) - 1);
-        const src = (instr >> 5) & ((1 << 3) - 1);
-        const imm = (instr) & ((1 << 5) - 1);
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const imm: u5 = @intCast((instr) & ((1 << 5) - 1));
         self.register[dest] = self.register[src] +% imm; // wrap around
     }
 
     fn add(self: *CPU, instr: u16) CPUError!void {
         std.log.info("add dispatched!", .{});
-        const dest = (instr >> 8) & ((1 << 3) - 1);
-        const src1 = (instr >> 5) & ((1 << 3) - 1);
-        const src2 = (instr >> 2) & ((1 << 3) - 1);
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
         self.register[dest] = self.register[src1] +% self.register[src2]; // wrap around
     }
 
     fn sub(self: *CPU, instr: u16) CPUError!void {
         std.log.info("sub dispatched!", .{});
-        const dest = (instr >> 8) & ((1 << 3) - 1);
-        const src1 = (instr >> 5) & ((1 << 3) - 1);
-        const src2 = (instr >> 2) & ((1 << 3) - 1);
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
         self.register[dest] = self.register[src1] -% self.register[src2]; // wrap around
     }
 };
