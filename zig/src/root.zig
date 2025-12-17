@@ -100,8 +100,7 @@ pub const CPU = struct {
         const dest = (instr >> 8) & ((1 << 3) - 1);
         const src = (instr >> 5) & ((1 << 3) - 1);
         const imm = (instr) & ((1 << 5) - 1);
-        std.log.info("dest {}, src {}, imm {}", .{ dest, src, imm });
-        self.register[dest] = self.register[src] + imm;
+        self.register[dest] = self.register[src] +% imm; // wrap around
     }
 };
 
@@ -160,4 +159,12 @@ test "Test addi" {
     try cpu.addi((1 << 8) | (1 << 5) | (0x7));
 
     try std.testing.expect(cpu.register[1] == 0xFFFF);
+}
+
+test "Test addi wraparound" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0xFFF2;
+    try cpu.addi((1 << 8) | (1 << 5) | (0x0F));
+    try std.testing.expect(cpu.register[1] == 1);
 }
