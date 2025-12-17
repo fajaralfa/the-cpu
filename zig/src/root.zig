@@ -31,6 +31,8 @@ pub const CPU = struct {
         cpu.handler[31] = halt;
         cpu.handler[2] = lui;
         cpu.handler[3] = addi;
+        cpu.handler[4] = add;
+        cpu.handler[5] = sub;
         return cpu;
     }
 
@@ -102,6 +104,22 @@ pub const CPU = struct {
         const imm = (instr) & ((1 << 5) - 1);
         self.register[dest] = self.register[src] +% imm; // wrap around
     }
+
+    fn add(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("add dispatched!", .{});
+        const dest = (instr >> 8) & ((1 << 3) - 1);
+        const src1 = (instr >> 5) & ((1 << 3) - 1);
+        const src2 = (instr >> 2) & ((1 << 3) - 1);
+        self.register[dest] = self.register[src1] +% self.register[src2]; // wrap around
+    }
+
+    fn sub(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("sub dispatched!", .{});
+        const dest = (instr >> 8) & ((1 << 3) - 1);
+        const src1 = (instr >> 5) & ((1 << 3) - 1);
+        const src2 = (instr >> 2) & ((1 << 3) - 1);
+        self.register[dest] = self.register[src1] -% self.register[src2]; // wrap around
+    }
 };
 
 test "Test load program" {
@@ -167,4 +185,44 @@ test "Test addi wraparound" {
     cpu.register[1] = 0xFFF2;
     try cpu.addi((1 << 8) | (1 << 5) | (0x0F));
     try std.testing.expect(cpu.register[1] == 1);
+}
+
+test "Test add" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 10;
+    cpu.register[2] = 20;
+
+    try cpu.add((1 << 8) | (1 << 5) | (2 << 2));
+
+    try std.testing.expect(cpu.register[1] == 30);
+}
+
+test "Test add wraparound" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0xFFF2;
+    cpu.register[2] = 0xF;
+    try cpu.add((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 1);
+}
+
+test "Test sub" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 32;
+    cpu.register[2] = 12;
+
+    try cpu.sub((1 << 8) | (1 << 5) | (2 << 2));
+
+    try std.testing.expect(cpu.register[1] == 20);
+}
+
+test "Test sub wraparound" {
+    var mem = [_]u8{0} ** max_memory;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 10;
+    cpu.register[2] = 20;
+    try cpu.sub((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 0xFFF6);
 }
