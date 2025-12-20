@@ -4,6 +4,7 @@ pub const CPUError = error{
     OutOfBounds,
     InvalidInstruction,
     MemoryTooLarge,
+    MisalignedMemory,
 };
 
 pub const register_count = 8;
@@ -28,11 +29,13 @@ pub const CPU = struct {
             .start_prog = @intCast(memory.len / 2),
             .handler = .{invalid} ** 32,
         };
-        cpu.handler[31] = halt;
-        cpu.handler[2] = lui;
-        cpu.handler[3] = addi;
-        cpu.handler[4] = add;
-        cpu.handler[5] = sub;
+        cpu.handler[0x1F] = halt;
+        cpu.handler[0x1] = lw;
+        // cpu.handler[0x2] = sw;
+        cpu.handler[0x2] = lui;
+        cpu.handler[0x3] = addi;
+        cpu.handler[0x4] = add;
+        cpu.handler[0x5] = sub;
         return cpu;
     }
 
@@ -87,6 +90,39 @@ pub const CPU = struct {
     fn halt(self: *CPU, _: u16) CPUError!void {
         std.log.info("halt dispatched!", .{});
         self.running = false;
+    }
+
+    fn lw(self: *CPU, instr: u16) CPUError!void {
+        const dest: u3 = @intCast((instr >> 8) & std.math.maxInt(u3));
+        const base: u3 = @intCast((instr >> 5) & std.math.maxInt(u3));
+        const offset: u5 = @intCast(instr & std.math.maxInt(u5));
+        const addr = self.register[base] + offset;
+        if (addr % 2 != 0) {
+            return CPUError.MisalignedMemory;
+        }
+        if (addr + 1 > self.memory.len) {
+            return CPUError.OutOfBounds;
+        }
+        const lo = self.memory[addr];
+        const hi = self.memory[addr + 1];
+        self.register[dest] = (@as(u16, hi) << 8) | lo;
+    }
+
+    fn sw(self: *CPU, instr: u16) CPUError!void {
+        const src: u3 = @intCast((instr >> 8) & std.math.maxInt(u3));
+        const base: u3 = @intCast((instr >> 5) & std.math.maxInt(u3));
+        const offset: u5 = @intCast(instr & std.math.maxInt(u5));
+        const addr = self.register[base] + offset;
+        if (addr % 2 != 0) {
+            return CPUError.MisalignedMemory;
+        }
+        if (addr > self.memory.len - 2) {
+            return CPUError.OutOfBounds;
+        }
+        const hi: u8 = @intCast(self.register[src] >> 8 & std.math.maxInt(u8));
+        const lo: u8 = @intCast(self.register[src] & std.math.maxInt(u8));
+        self.memory[addr] = lo;
+        self.memory[addr + 1] = hi;
     }
 
     fn lui(self: *CPU, instr: u16) CPUError!void {
@@ -149,6 +185,55 @@ test "Test run program" {
     try cpu.loadProgram(&program);
     try cpu.runProgram();
     try std.testing.expect(true);
+}
+
+test "Test lw" {
+    var mem = [_]u8{0} ** 32;
+    var cpu = try CPU.init(&mem);
+    cpu.memory[10] = 0x11;
+    cpu.memory[11] = 0x23;
+    cpu.register[2] = 10;
+    try cpu.lw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(cpu.register[1] == 0x2311);
+}
+
+test "Test lw OutOfBounds, Misaligned" {
+    var mem = [_]u8{0} ** 32;
+    var cpu = try CPU.init(&mem);
+    cpu.register[2] = 128; // make alignment checking passes
+    var result = cpu.lw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(result == CPUError.OutOfBounds);
+
+    cpu.register[2] = 61;
+    result = cpu.lw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(result == CPUError.MisalignedMemory);
+}
+
+test "Test sw" {
+    var mem = [_]u8{0} ** 32;
+    var cpu = try CPU.init(&mem);
+    cpu.register[2] = 10;
+    cpu.register[1] = 0x2311;
+    try cpu.sw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(cpu.memory[10] == 0x11);
+    try std.testing.expect(cpu.memory[11] == 0x23);
+}
+
+test "Test sw OutOfBound, MisalignedMemory" {
+    var mem = [_]u8{0} ** 32;
+    var cpu = try CPU.init(&mem);
+
+    // OutOfBound
+    cpu.register[1] = 0x2311;
+    cpu.register[2] = 34;
+    var result = cpu.sw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(result == CPUError.OutOfBounds);
+
+    // Misaligned
+    cpu.register[1] = 0x2311;
+    cpu.register[2] = 31;
+    result = cpu.sw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(result == CPUError.MisalignedMemory);
 }
 
 test "Test lui" {
