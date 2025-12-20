@@ -31,11 +31,11 @@ pub const CPU = struct {
         };
         cpu.handler[0x1F] = halt;
         cpu.handler[0x1] = lw;
-        // cpu.handler[0x2] = sw;
-        cpu.handler[0x2] = lui;
-        cpu.handler[0x3] = addi;
-        cpu.handler[0x4] = add;
-        cpu.handler[0x5] = sub;
+        cpu.handler[0x2] = sw;
+        cpu.handler[0x3] = lui;
+        cpu.handler[0x4] = addi;
+        cpu.handler[0x5] = add;
+        cpu.handler[0x6] = sub;
         return cpu;
     }
 
@@ -179,7 +179,7 @@ test "Test run program" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     const program = [_]u8{
-        0, (2 << 3) | 1, // load r1, 0
+        0, (3 << 3) | 1, // load r1, 0
         0, (31 << 3), // halt
     };
     try cpu.loadProgram(&program);
