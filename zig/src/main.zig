@@ -1,15 +1,18 @@
 const std = @import("std");
 const cpu = @import("zig");
+const assembler = @import("assembler.zig");
 
 pub fn main() !void {
     var mem = [_]u8{0} ** cpu.max_memory;
     var machine = try cpu.CPU.init(&mem);
-    const program = [_]u8{
-        0xFF, (3 << 3) | (1), // lui r1, #0xFF
-        (1 << 5) | (0x1F), (4 << 3) | (1), // addi r1, r1, #0x1F
-        0, (31 << 3), // halt
+    const program_words = [_]u16{
+        assembler.lui(1, 0xFF),
+        assembler.addi(1, 1, 0x1F),
+        assembler.halt(),
     };
-    try machine.loadProgram(&program);
+    var buffer: [program_words.len * 2]u8 = undefined;
+    const program = try assembler.assemble(buffer[0..], program_words[0..]);
+    try machine.loadProgram(program);
     try machine.runProgram();
-    std.log.info("register r1 {}", .{machine.register[1]});
+    std.log.info("register r1 equal expected = {}", .{machine.register[1] == 0xFF1F});
 }
