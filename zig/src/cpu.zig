@@ -202,7 +202,7 @@ test "load program" {
     try std.testing.expect(cpu.memory[cpu.start_prog + 2] == program[2]);
 }
 
-test "Test load program out of bound" {
+test "load program out of bound" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     const start_addr: usize = max_memory / 2;
@@ -210,7 +210,7 @@ test "Test load program out of bound" {
     try std.testing.expectError(CPUError.OutOfBounds, cpu.loadProgram(&program));
 }
 
-test "Test run program" {
+test "run program" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     const program = [_]u8{
@@ -222,7 +222,7 @@ test "Test run program" {
     try std.testing.expect(true);
 }
 
-test "Test lw" {
+test "lw" {
     var mem = [_]u8{0} ** 32;
     var cpu = try CPU.init(&mem);
     cpu.memory[10] = 0x11;
@@ -232,7 +232,7 @@ test "Test lw" {
     try std.testing.expect(cpu.register[1] == 0x2311);
 }
 
-test "Test lw OutOfBounds, Misaligned" {
+test "lw OutOfBounds, Misaligned" {
     var mem = [_]u8{0} ** 32;
     var cpu = try CPU.init(&mem);
     cpu.register[2] = 128; // make alignment checking passes
@@ -244,7 +244,7 @@ test "Test lw OutOfBounds, Misaligned" {
     try std.testing.expect(result == CPUError.MisalignedMemory);
 }
 
-test "Test sw" {
+test "sw" {
     var mem = [_]u8{0} ** 32;
     var cpu = try CPU.init(&mem);
     cpu.register[2] = 10;
@@ -254,7 +254,7 @@ test "Test sw" {
     try std.testing.expect(cpu.memory[11] == 0x23);
 }
 
-test "Test sw OutOfBound, MisalignedMemory" {
+test "sw OutOfBound, MisalignedMemory" {
     var mem = [_]u8{0} ** 32;
     var cpu = try CPU.init(&mem);
 
@@ -271,7 +271,7 @@ test "Test sw OutOfBound, MisalignedMemory" {
     try std.testing.expect(result == CPUError.MisalignedMemory);
 }
 
-test "Test lui" {
+test "lui" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     try cpu.lui((1 << 8) | 0xFF);
@@ -279,7 +279,7 @@ test "Test lui" {
     try std.testing.expect(cpu.register[1] == 0xFF00);
 }
 
-test "Test addi" {
+test "addi" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     cpu.register[1] = 0xFF00;
@@ -298,7 +298,7 @@ test "Test addi" {
     try std.testing.expect(cpu.register[1] == 0xFFFF);
 }
 
-test "Test addi wraparound" {
+test "addi wraparound" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     cpu.register[1] = 0xFFF2;
@@ -306,7 +306,7 @@ test "Test addi wraparound" {
     try std.testing.expect(cpu.register[1] == 1);
 }
 
-test "Test add" {
+test "add" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     cpu.register[1] = 10;
@@ -317,7 +317,7 @@ test "Test add" {
     try std.testing.expect(cpu.register[1] == 30);
 }
 
-test "Test add wraparound" {
+test "add wraparound" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     cpu.register[1] = 0xFFF2;
@@ -326,7 +326,7 @@ test "Test add wraparound" {
     try std.testing.expect(cpu.register[1] == 1);
 }
 
-test "Test sub" {
+test "sub" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     cpu.register[1] = 32;
@@ -337,7 +337,7 @@ test "Test sub" {
     try std.testing.expect(cpu.register[1] == 20);
 }
 
-test "Test sub wraparound" {
+test "sub wraparound" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     cpu.register[1] = 10;
