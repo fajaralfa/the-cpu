@@ -1,6 +1,7 @@
 const std = @import("std");
-const cpu = @import("zig");
-const assembler = @import("assembler.zig");
+const mod = @import("zig");
+const cpu = mod.cpu;
+const assembler = mod.assembler;
 
 pub fn main() !void {
     var mem = [_]u8{0} ** cpu.max_memory;
