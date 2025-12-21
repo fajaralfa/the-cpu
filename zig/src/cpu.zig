@@ -41,6 +41,8 @@ pub const CPU = struct {
         cpu.handler[0x8] = notInstr;
         cpu.handler[0x9] = orInstr;
         cpu.handler[0xa] = xorInstr;
+        cpu.handler[0xb] = sll;
+        cpu.handler[0xc] = srl;
         return cpu;
     }
 
@@ -190,6 +192,22 @@ pub const CPU = struct {
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
         self.register[dest] = self.register[src1] ^ self.register[src2];
+    }
+
+    fn sll(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("sll dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
+        self.register[dest] = self.register[src1] << @truncate(self.register[src2]);
+    }
+
+    fn srl(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("srl dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
+        self.register[dest] = self.register[src1] >> @truncate(self.register[src2]);
     }
 };
 
@@ -384,4 +402,22 @@ test "xor" {
     cpu.register[2] = 0b1011;
     try cpu.xorInstr((1 << 8) | (1 << 5) | (2 << 2));
     try std.testing.expect(cpu.register[1] == 0b0111);
+}
+
+test "sll" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = @as(u16, 0b0001);
+    cpu.register[2] = 2;
+    try cpu.sll((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == @as(u16, 0b0100));
+}
+
+test "srl" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0b1000;
+    cpu.register[2] = 2;
+    try cpu.srl((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 0b0010);
 }
