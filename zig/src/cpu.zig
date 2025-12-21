@@ -1,4 +1,5 @@
 const std = @import("std");
+const assembler = @import("assembler.zig");
 
 pub const CPUError = error{
     OutOfBounds,
@@ -213,11 +214,14 @@ test "load program out of bound" {
 test "run program" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
-    const program = [_]u8{
-        0, (3 << 3) | 1, // load r1, 0
-        0, (31 << 3), // halt
+    const program_words = [_]u16{
+        assembler.lui(1, 0xFF),
+        assembler.addi(1, 1, 0x1F),
+        assembler.halt(),
     };
-    try cpu.loadProgram(&program);
+    var buffer: [program_words.len * 2]u8 = undefined;
+    var program = try assembler.assemble(buffer[0..], program_words[0..]);
+    try cpu.loadProgram(program[0..]);
     try cpu.runProgram();
     try std.testing.expect(true);
 }

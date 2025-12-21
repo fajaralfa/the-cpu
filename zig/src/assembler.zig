@@ -39,10 +39,9 @@ pub fn sub(dest: u3, src1: u3, src2: u3) u16 {
 }
 
 test "assemble little-endian u16 to bytes" {
-    const allocator = std.testing.allocator;
-    const instructions: []const u16 = &.{ 1, 2, 3 };
-    const bin = try assemble(allocator, instructions);
-    defer allocator.free(bin);
+    const program_words: []const u16 = &.{ 1, 2, 3 };
+    var buffer: [program_words.len * 2]u8 = undefined;
+    const bin = try assemble(&buffer, program_words);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 1, 0, 2, 0, 3, 0 }, bin);
 }
 
