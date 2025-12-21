@@ -36,6 +36,10 @@ pub const CPU = struct {
         cpu.handler[0x4] = addi;
         cpu.handler[0x5] = add;
         cpu.handler[0x6] = sub;
+        cpu.handler[0x7] = andInstr;
+        cpu.handler[0x8] = notInstr;
+        cpu.handler[0x9] = orInstr;
+        cpu.handler[0xa] = xorInstr;
         return cpu;
     }
 
@@ -155,9 +159,40 @@ pub const CPU = struct {
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
         self.register[dest] = self.register[src1] -% self.register[src2]; // wrap around
     }
+
+    fn andInstr(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("and dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
+        self.register[dest] = self.register[src1] & self.register[src2];
+    }
+
+    fn notInstr(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("not dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        self.register[dest] = ~self.register[src];
+    }
+
+    fn orInstr(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("or dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
+        self.register[dest] = self.register[src1] | self.register[src2];
+    }
+
+    fn xorInstr(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("or dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
+        const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
+        const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
+        self.register[dest] = self.register[src1] ^ self.register[src2];
+    }
 };
 
-test "Test load program" {
+test "load program" {
     var mem = [_]u8{0} ** max_memory;
     var cpu = try CPU.init(&mem);
     const program = [_]u8{ 2, 2, 31 };
@@ -309,4 +344,40 @@ test "Test sub wraparound" {
     cpu.register[2] = 20;
     try cpu.sub((1 << 8) | (1 << 5) | (2 << 2));
     try std.testing.expect(cpu.register[1] == 0xFFF6);
+}
+
+test "and" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0b1100;
+    cpu.register[2] = 0b1011;
+    try cpu.andInstr((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 0b1000);
+}
+
+test "not" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0b1011;
+    try cpu.notInstr((1 << 8) | (1 << 5));
+    const result = cpu.register[1] & std.math.maxInt(u4); // only compare last 4 bit
+    try std.testing.expect(result == 0b0100);
+}
+
+test "or" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0b1100;
+    cpu.register[2] = 0b1011;
+    try cpu.orInstr((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 0b1111);
+}
+
+test "xor" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0b1100;
+    cpu.register[2] = 0b1011;
+    try cpu.xorInstr((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 0b0111);
 }
