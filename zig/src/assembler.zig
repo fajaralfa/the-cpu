@@ -66,15 +66,15 @@ pub fn xorInstr(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(10, dest, src1, src2);
 }
 
-pub fn sllInstr(dest: u3, src1: u3, src2: u3) u16 {
+pub fn sll(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(11, dest, src1, src2);
 }
 
-pub fn srlInstr(dest: u3, src1: u3, src2: u3) u16 {
+pub fn srl(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(12, dest, src1, src2);
 }
 
-pub fn sraInstr(dest: u3, src1: u3, src2: u3) u16 {
+pub fn sra(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(13, dest, src1, src2);
 }
 
@@ -104,6 +104,7 @@ test "encodeRType layout" {
 }
 
 test "Instruction assignments" {
+    try std.testing.expectEqual(@as(u5, 0x1f), opcode(halt()));
     try std.testing.expectEqual(@as(u5, 1), opcode(lw(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 2), opcode(sw(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 3), opcode(lui(0, 0)));
@@ -114,7 +115,7 @@ test "Instruction assignments" {
     try std.testing.expectEqual(@as(u5, 8), opcode(notInstr(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 9), opcode(orInstr(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 10), opcode(xorInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 11), opcode(sllInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 12), opcode(srlInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 13), opcode(sraInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 11), opcode(sll(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 12), opcode(srl(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 13), opcode(sra(0, 0, 0)));
 }
