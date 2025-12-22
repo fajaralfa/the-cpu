@@ -44,6 +44,9 @@ pub const CPU = struct {
         cpu.handler[0xb] = sll;
         cpu.handler[0xc] = srl;
         cpu.handler[0xd] = sra;
+        cpu.handler[0xe] = jr;
+        cpu.handler[0xf] = beq;
+        cpu.handler[0x10] = bne;
         return cpu;
     }
 
@@ -224,6 +227,35 @@ pub const CPU = struct {
         // Perform arithmetic right shift
         const result = @as(u16, @bitCast(value >> shift_amt));
         self.register[dest] = result;
+    }
+
+    fn jr(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("jr dispatched", .{});
+        const dest: u3 = @intCast((instr >> 8) & 7);
+        const offset = @as(i16, @bitCast(self.register[dest])) * 2;
+        self.register[0] = @as(u16, @bitCast(@as(i16, @bitCast(self.register[0])) + offset));
+    }
+
+    fn beq(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("beq dispatched", .{});
+        const dest: u3 = @intCast((instr >> 8) & 7);
+        const src1: u3 = @intCast((instr >> 5) & 7);
+        const src2: u3 = @intCast((instr >> 2) & 7);
+        const jumpinstr: u16 = (@as(u16, dest) << 8);
+        if (self.register[src1] == self.register[src2]) {
+            try self.jr(jumpinstr);
+        }
+    }
+
+    fn bne(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("bne dispatched", .{});
+        const dest: u3 = @intCast((instr >> 8) & 7);
+        const src1: u3 = @intCast((instr >> 5) & 7);
+        const src2: u3 = @intCast((instr >> 2) & 7);
+        const jumpinstr: u16 = (@as(u16, dest) << 8);
+        if (self.register[src1] != self.register[src2]) {
+            try self.jr(jumpinstr);
+        }
     }
 };
 
@@ -450,4 +482,113 @@ test "sra" {
     cpu.register[2] = 2;
     try cpu.sra((1 << 8) | (1 << 5) | (2 << 2));
     try std.testing.expect(cpu.register[1] == 1); // 1
+}
+
+test "jr adds register to PC" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    // PC starts at 100
+    cpu.register[0] = 100;
+    // jump register (say r3) contains +20
+    cpu.register[3] = 20;
+    // instr with dest = 3 in bits [10:8]
+    const instr: u16 = (3 << 8);
+    try cpu.jr(instr);
+    try std.testing.expect(cpu.register[0] == 140);
+}
+
+test "jr backward" {
+    var mem = [_]u8{0} ** 16;
+    var cpu = try CPU.init(&mem);
+    cpu.register[0] = 100;
+    // -4 instructions = -8 bytes
+    cpu.register[5] = @bitCast(@as(i16, -4));
+
+    try cpu.jr((5 << 8));
+    try std.testing.expect(cpu.register[0] == 92);
+}
+
+test "jr zero offset" {
+    var mem = [_]u8{0} ** 16;
+    var cpu = try CPU.init(&mem);
+    cpu.register[0] = 50;
+    cpu.register[1] = 0;
+
+    try cpu.jr(1 << 8);
+
+    try std.testing.expect(cpu.register[0] == 50);
+}
+
+test "beq" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    const pc = 20;
+    cpu.register[0] = pc;
+    cpu.register[1] = 4;
+    cpu.register[2] = 25;
+    cpu.register[3] = 25;
+
+    // equal
+    var instr: u16 = (1 << 8) | (2 << 5) | (3 << 2);
+    try cpu.beq(instr);
+    try std.testing.expectEqual(pc + 8, cpu.register[0]);
+
+    // not equal
+    cpu.register[0] = pc;
+    cpu.register[3] = 24; // make it different
+    instr = (1 << 8) | (2 << 5) | (3 << 2);
+    try cpu.beq(instr);
+    try std.testing.expectEqual(pc, cpu.register[0]);
+}
+
+test "beq backward" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    const pc = 20;
+    cpu.register[0] = pc;
+    cpu.register[1] = @bitCast(@as(i16, -4));
+    cpu.register[2] = 25;
+    cpu.register[3] = 25;
+
+    // equal
+    const instr: u16 = (1 << 8) | (2 << 5) | (3 << 2);
+    try cpu.beq(instr);
+    try std.testing.expectEqual(pc - 8, cpu.register[0]);
+}
+
+test "bne" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    const pc = 20;
+    cpu.register[0] = pc;
+    cpu.register[1] = 10;
+    cpu.register[2] = 25;
+    cpu.register[3] = 25;
+
+    // equal
+    var instr: u16 = (1 << 8) | (2 << 5) | (3 << 2);
+    try cpu.bne(instr);
+    try std.testing.expectEqual(pc, cpu.register[0]);
+
+    // not equal
+    cpu.register[0] = pc;
+    cpu.register[3] = 24; // make it different
+    instr = (1 << 8) | (2 << 5) | (3 << 2);
+    try cpu.bne(instr);
+    try std.testing.expectEqual(pc + 20, cpu.register[0]);
+}
+
+test "bne backward" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    const pc = 20;
+    cpu.register[0] = pc;
+    cpu.register[1] = @bitCast(@as(i16, -4));
+    cpu.register[2] = 25;
+    cpu.register[3] = 24;
+
+    // equal
+    const instr: u16 = (1 << 8) | (2 << 5) | (3 << 2);
+    try cpu.bne(instr);
+    try std.testing.expectEqual(pc - 8, cpu.register[0]);
 }
