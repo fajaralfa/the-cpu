@@ -10,16 +10,28 @@ pub fn assemble(dest: []u8, words: []const u16) ![]u8 {
     return dest;
 }
 
+fn encodeIType(comptime op: u5, ra: u3, rb: u3, imm: u5) u16 {
+    return (@as(u16, op) << 11) | (@as(u16, ra) << 8) | (@as(u16, rb) << 5) | imm;
+}
+
+fn encodeRType(comptime op: u5, ra: u3, rb: u3, rc: u3) u16 {
+    return (@as(u16, op) << 11) | (@as(u16, ra) << 8) | (@as(u16, rb) << 5) | (@as(u16, rc) << 2);
+}
+
+fn opcode(word: u16) u5 {
+    return @truncate(word >> 11);
+}
+
 pub fn halt() u16 {
     return (0x1F << 11);
 }
 
 pub fn lw(dest: u3, base: u3, offset: u5) u16 {
-    return (1 << 11) | (@as(u16, dest) << 8) | (@as(u16, base) << 5) | offset;
+    return encodeIType(1, dest, base, offset);
 }
 
 pub fn sw(src: u3, base: u3, offset: u5) u16 {
-    return (2 << 11) | (@as(u16, src) << 8) | (@as(u16, base) << 5) | offset;
+    return encodeIType(2, src, base, offset);
 }
 
 pub fn lui(dest: u3, imm: u8) u16 {
@@ -27,15 +39,15 @@ pub fn lui(dest: u3, imm: u8) u16 {
 }
 
 pub fn addi(dest: u3, src: u3, imm: u5) u16 {
-    return (4 << 11) | (@as(u16, dest) << 8) | (@as(u16, src) << 5) | imm;
+    return encodeIType(4, dest, src, imm);
 }
 
 pub fn add(dest: u3, src1: u3, src2: u3) u16 {
-    return (5 << 11) | (@as(u16, dest) << 8) | (@as(u16, src1) << 5) | (@as(u16, src2) << 2);
+    return encodeRType(5, dest, src1, src2);
 }
 
 pub fn sub(dest: u3, src1: u3, src2: u3) u16 {
-    return (6 << 11) | (@as(u16, dest) << 8) | (@as(u16, src1) << 5) | (@as(u16, src2) << 2);
+    return encodeRType(6, dest, src1, src2);
 }
 
 test "assemble little-endian u16 to bytes" {
@@ -45,18 +57,22 @@ test "assemble little-endian u16 to bytes" {
     try std.testing.expectEqualSlices(u8, &[_]u8{ 1, 0, 2, 0, 3, 0 }, bin);
 }
 
-test "lw" {
-    const expected: u16 = (1 << 11) | (6 << 8) | (7 << 5) | 25;
-    try std.testing.expectEqual(expected, lw(6, 7, 25));
+test "encodeIType layout" {
+    const word = encodeIType(0b10101, 0b001, 0b010, 0b11111);
 
-    try std.testing.expectEqual(@as(u16, 1 << 11), lw(0, 0, 0));
+    try std.testing.expectEqual(
+        @as(u16, 0b10101_001_010_11111),
+        word,
+    );
 }
 
-test "sw" {
-    const expected: u16 = (2 << 11) | (6 << 8) | (7 << 5) | 25;
-    try std.testing.expectEqual(expected, sw(6, 7, 25));
+test "encodeRType layout" {
+    const word = encodeRType(0b00110, 0b111, 0b000, 0b101);
 
-    try std.testing.expectEqual(@as(u16, 2 << 11), sw(0, 0, 0));
+    try std.testing.expectEqual(
+        @as(u16, 0b00110_111_000_101_00),
+        word,
+    );
 }
 
 test "lui" {
