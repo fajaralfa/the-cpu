@@ -10,6 +10,10 @@ pub fn assemble(dest: []u8, words: []const u16) ![]u8 {
     return dest;
 }
 
+fn encodeUIType(comptime op: u5, ra: u3, imm: u8) u16 {
+    return (@as(u16, op) << 11) | (@as(u16, ra) << 8) | imm;
+}
+
 fn encodeIType(comptime op: u5, ra: u3, rb: u3, imm: u5) u16 {
     return (@as(u16, op) << 11) | (@as(u16, ra) << 8) | (@as(u16, rb) << 5) | imm;
 }
@@ -35,7 +39,7 @@ pub fn sw(src: u3, base: u3, offset: u5) u16 {
 }
 
 pub fn lui(dest: u3, imm: u8) u16 {
-    return (3 << 11) | (@as(u16, dest) << 8) | imm;
+    return encodeUIType(3, dest, imm);
 }
 
 pub fn addi(dest: u3, src: u3, imm: u5) u16 {
@@ -83,6 +87,15 @@ test "assemble little-endian u16 to bytes" {
     var buffer: [program_words.len * 2]u8 = undefined;
     const bin = try assemble(&buffer, program_words);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 1, 0, 2, 0, 3, 0 }, bin);
+}
+
+test "encodeUIType layout" {
+    const word = encodeUIType(0b10101, 0b001, 0b01111111);
+
+    try std.testing.expectEqual(
+        @as(u16, 0b10101_001_01111111),
+        word,
+    );
 }
 
 test "encodeIType layout" {
