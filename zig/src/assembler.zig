@@ -50,6 +50,34 @@ pub fn sub(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(6, dest, src1, src2);
 }
 
+pub fn andInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(7, dest, src1, src2);
+}
+
+pub fn notInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(8, dest, src1, src2);
+}
+
+pub fn orInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(9, dest, src1, src2);
+}
+
+pub fn xorInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(10, dest, src1, src2);
+}
+
+pub fn sllInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(11, dest, src1, src2);
+}
+
+pub fn srlInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(12, dest, src1, src2);
+}
+
+pub fn sraInstr(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(13, dest, src1, src2);
+}
+
 test "assemble little-endian u16 to bytes" {
     const program_words: []const u16 = &.{ 1, 2, 3 };
     var buffer: [program_words.len * 2]u8 = undefined;
@@ -82,4 +110,11 @@ test "Instruction assignments" {
     try std.testing.expectEqual(@as(u5, 4), opcode(addi(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 5), opcode(add(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 6), opcode(sub(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 7), opcode(andInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 8), opcode(notInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 9), opcode(orInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 10), opcode(xorInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 11), opcode(sllInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 12), opcode(srlInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 13), opcode(sraInstr(0, 0, 0)));
 }
