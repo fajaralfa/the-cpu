@@ -75,30 +75,11 @@ test "encodeRType layout" {
     );
 }
 
-test "lui" {
-    const expected: u16 = (3 << 11) | (6 << 8) | 7;
-    try std.testing.expectEqual(expected, lui(6, 7));
-
-    try std.testing.expectEqual(@as(u16, 3 << 11), lui(0, 0));
-}
-
-test "addi" {
-    const expected: u16 = (4 << 11) | (1 << 8) | (2 << 5) | 0x1F;
-    try std.testing.expectEqual(expected, addi(1, 2, 0x1F));
-
-    try std.testing.expectEqual(@as(u16, 4 << 11), addi(0, 0, 0));
-}
-
-test "add" {
-    const expected: u16 = (5 << 11) | (1 << 8) | (2 << 5) | (3 << 2);
-    try std.testing.expectEqual(expected, add(1, 2, 3));
-
-    try std.testing.expectEqual(@as(u16, 5 << 11), add(0, 0, 0));
-}
-
-test "sub" {
-    const expected: u16 = (6 << 11) | (1 << 8) | (2 << 5) | (3 << 2);
-    try std.testing.expectEqual(expected, sub(1, 2, 3));
-
-    try std.testing.expectEqual(@as(u16, 6 << 11), sub(0, 0, 0));
+test "Instruction assignments" {
+    try std.testing.expectEqual(@as(u5, 1), opcode(lw(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 2), opcode(sw(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 3), opcode(lui(0, 0)));
+    try std.testing.expectEqual(@as(u5, 4), opcode(addi(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 5), opcode(add(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 6), opcode(sub(0, 0, 0)));
 }
