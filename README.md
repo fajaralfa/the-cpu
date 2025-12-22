@@ -45,8 +45,7 @@
 | sll | 0x0b |sll x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | x1 = x2 << x3 |
 | srl | 0x0c |srl x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | x1 = x2 >> x3 |
 | sra | 0x0d |sra x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | x1 = x2 >>> x3 |
-| ja | 0x0e | ja x1 | 5, 3, 8 (op, dest, pad) | PC = x1 |
-| jr | 0x0f | jr x1 | 5, 3, 8 (op, dest, pad) | PC += x1 |
-| beq | 0x10 |beq x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 == x3) PC += x1 |
-| bne | 0x11 |bne x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 != x3) PC += x1 |
+| jr | 0x0e | jr x1 | 5, 3, 8 (op, dest, pad) | PC += x1 * 2 |
+| beq | 0x0f |beq x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 == x3) PC += x1 * 2 |
+| bne | 0x10 |bne x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2) | if (x2 != x3) PC += x1 * 2 |
 | halt | 0x1F | halt | 5, 11 (op, pad) | stop cpu |
