@@ -43,6 +43,7 @@ pub const CPU = struct {
         cpu.handler[0xa] = xorInstr;
         cpu.handler[0xb] = sll;
         cpu.handler[0xc] = srl;
+        cpu.handler[0xd] = sra;
         return cpu;
     }
 
@@ -208,6 +209,21 @@ pub const CPU = struct {
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
         self.register[dest] = self.register[src1] >> @truncate(self.register[src2]);
+    }
+
+    fn sra(self: *CPU, instr: u16) CPUError!void {
+        std.log.info("sra dispatched!", .{});
+        const dest: u3 = @intCast((instr >> 8) & 7);
+        const src1: u3 = @intCast((instr >> 5) & 7);
+        const src2: u3 = @intCast((instr >> 2) & 7);
+
+        // Treat u16 as two's complement signed value
+        const value = @as(i16, @bitCast(self.register[src1]));
+        const shift_amt: u4 = @truncate(self.register[src2]);
+
+        // Perform arithmetic right shift
+        const result = @as(u16, @bitCast(value >> shift_amt));
+        self.register[dest] = result;
     }
 };
 
@@ -420,4 +436,18 @@ test "srl" {
     cpu.register[2] = 2;
     try cpu.srl((1 << 8) | (1 << 5) | (2 << 2));
     try std.testing.expect(cpu.register[1] == 0b0010);
+}
+
+test "sra" {
+    var mem = [_]u8{0} ** 10;
+    var cpu = try CPU.init(&mem);
+    cpu.register[1] = 0b1111111111111100; // -4 as i16
+    cpu.register[2] = 2;
+    try cpu.sra((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 0b1111111111111111); // -1
+
+    cpu.register[1] = 0b100; // 4 as unsigned bit pattern (same bit representation in i16 and u16 for positive values within range)
+    cpu.register[2] = 2;
+    try cpu.sra((1 << 8) | (1 << 5) | (2 << 2));
+    try std.testing.expect(cpu.register[1] == 1); // 1
 }
