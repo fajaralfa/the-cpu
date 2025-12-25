@@ -71,10 +71,21 @@ pub const CPU = struct {
         }
     }
 
-    pub fn runProgram(self: *CPU) CPUError!void {
+    pub fn runProgram(self: *CPU) !void {
         self.running = true;
         self.register[0] = self.start_prog;
+        const allocator = std.heap.page_allocator;
         while (self.running) {
+            var result = std.ArrayList(u8).empty;
+            defer result.deinit(allocator);
+
+            for (self.register, 0..) |r, i| {
+                const info = try std.fmt.allocPrint(allocator, "R{d}: {x:4}  |", .{ i, r });
+                try result.appendSlice(allocator, info);
+            }
+
+            std.log.debug("{s}\n", .{result.items});
+
             const instr = try self.fetchInstr();
             try self.execInstr(instr);
         }
