@@ -95,11 +95,9 @@ pub const CPU = struct {
     }
 
     fn execInstr(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("instr {b}", .{instr});
         const opcode = (instr >> 11);
-        std.log.info("opcode {}", .{opcode});
+        std.log.debug("op {x} instr {b:13}", .{ opcode, instr & std.math.maxInt(u13) });
         const handler = self.handler[opcode];
-        std.log.info("instr: {b}", .{instr});
         try handler(self, instr);
     }
 
@@ -135,14 +133,14 @@ pub const CPU = struct {
     }
 
     fn invalid(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("invalid instruction dispatched!", .{});
+        std.log.debug("invalid instruction", .{});
         _ = self;
         _ = instr;
         return CPUError.InvalidInstruction;
     }
 
     fn halt(self: *CPU, _: u16) CPUError!void {
-        std.log.info("halt dispatched!", .{});
+        std.log.debug("halt", .{});
         self.running = false;
     }
 
@@ -157,9 +155,7 @@ pub const CPU = struct {
         if (addr + 1 > self.memory.len) {
             return CPUError.OutOfBounds;
         }
-        const lo = self.memory[addr];
-        const hi = self.memory[addr + 1];
-        self.register[dest] = (@as(u16, hi) << 8) | lo;
+        self.register[dest] = try self.load16(addr);
     }
 
     fn sw(self: *CPU, instr: u16) CPUError!void {
@@ -173,21 +169,18 @@ pub const CPU = struct {
         if (addr > self.memory.len - 2) {
             return CPUError.OutOfBounds;
         }
-        const hi: u8 = @intCast(self.register[src] >> 8 & std.math.maxInt(u8));
-        const lo: u8 = @intCast(self.register[src] & std.math.maxInt(u8));
-        self.memory[addr] = lo;
-        self.memory[addr + 1] = hi;
+        try self.store16(addr, self.register[src]);
     }
 
     fn lui(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("lui dispatched!", .{});
+        std.log.debug("lui", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const imm: u16 = @intCast(instr & 0xFF); // casting this to u8 throws:
         self.register[dest] = imm << 8; // type 'u3' cannot represent integer value '8'
     }
 
     fn addi(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("addi dispatched!", .{});
+        std.log.debug("addi", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const imm: u5 = @intCast((instr) & ((1 << 5) - 1));
@@ -195,7 +188,7 @@ pub const CPU = struct {
     }
 
     fn add(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("add dispatched!", .{});
+        std.log.debug("add", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -203,7 +196,7 @@ pub const CPU = struct {
     }
 
     fn sub(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("sub dispatched!", .{});
+        std.log.debug("sub", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -211,7 +204,7 @@ pub const CPU = struct {
     }
 
     fn andInstr(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("and dispatched!", .{});
+        std.log.debug("and", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -219,14 +212,14 @@ pub const CPU = struct {
     }
 
     fn notInstr(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("not dispatched!", .{});
+        std.log.debug("not", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         self.register[dest] = ~self.register[src];
     }
 
     fn orInstr(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("or dispatched!", .{});
+        std.log.debug("or", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -234,7 +227,7 @@ pub const CPU = struct {
     }
 
     fn xorInstr(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("or dispatched!", .{});
+        std.log.debug("or", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -242,7 +235,7 @@ pub const CPU = struct {
     }
 
     fn sll(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("sll dispatched!", .{});
+        std.log.debug("sll", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -250,7 +243,7 @@ pub const CPU = struct {
     }
 
     fn srl(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("srl dispatched!", .{});
+        std.log.debug("srl", .{});
         const dest: u3 = @intCast((instr >> 8) & ((1 << 3) - 1));
         const src1: u3 = @intCast((instr >> 5) & ((1 << 3) - 1));
         const src2: u3 = @intCast((instr >> 2) & ((1 << 3) - 1));
@@ -258,7 +251,7 @@ pub const CPU = struct {
     }
 
     fn sra(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("sra dispatched!", .{});
+        std.log.debug("sra", .{});
         const dest: u3 = @intCast((instr >> 8) & 7);
         const src1: u3 = @intCast((instr >> 5) & 7);
         const src2: u3 = @intCast((instr >> 2) & 7);
@@ -273,14 +266,14 @@ pub const CPU = struct {
     }
 
     fn jr(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("jr dispatched", .{});
+        std.log.debug("jr", .{});
         const dest: u3 = @intCast((instr >> 8) & 7);
         const offset = @as(i16, @bitCast(self.register[dest])) * 2;
         self.register[0] = @as(u16, @bitCast(@as(i16, @bitCast(self.register[0])) + offset));
     }
 
     fn beq(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("beq dispatched", .{});
+        std.log.debug("beq", .{});
         const dest: u3 = @intCast((instr >> 8) & 7);
         const src1: u3 = @intCast((instr >> 5) & 7);
         const src2: u3 = @intCast((instr >> 2) & 7);
@@ -291,7 +284,7 @@ pub const CPU = struct {
     }
 
     fn bne(self: *CPU, instr: u16) CPUError!void {
-        std.log.info("bne dispatched", .{});
+        std.log.debug("bne", .{});
         const dest: u3 = @intCast((instr >> 8) & 7);
         const src1: u3 = @intCast((instr >> 5) & 7);
         const src2: u3 = @intCast((instr >> 2) & 7);
