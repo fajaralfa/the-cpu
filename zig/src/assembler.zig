@@ -82,6 +82,18 @@ pub fn sra(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(13, dest, src1, src2);
 }
 
+pub fn jr(dest: u3) u16 {
+    return encodeUIType(0xe, dest, 0);
+}
+
+pub fn beq(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(0xf, dest, src1, src2);
+}
+
+pub fn bne(dest: u3, src1: u3, src2: u3) u16 {
+    return encodeRType(0x10, dest, src1, src2);
+}
+
 test "assemble little-endian u16 to bytes" {
     const program_words: []const u16 = &.{ 1, 2, 3 };
     var buffer: [program_words.len * 2]u8 = undefined;
