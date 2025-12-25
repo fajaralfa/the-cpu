@@ -1,11 +1,22 @@
 const std = @import("std");
 const assembler = @import("assembler.zig");
+const mmiomod = @import("mmio.zig");
 
 pub const CPUError = error{
     OutOfBounds,
     InvalidInstruction,
     MemoryTooLarge,
     MisalignedMemory,
+    InvalidAddress,
+};
+
+pub const MMIODevice = struct {
+    base: u16,
+    size: u16,
+    ctx: *anyopaque,
+
+    read: *const fn (ctx: *anyopaque, addr: u16) CPUError!u16,
+    write: *const fn (ctx: *anyopaque, addr: u16, value: u16) CPUError!void,
 };
 
 pub const register_count = 8;
@@ -17,6 +28,7 @@ pub const CPU = struct {
     memory: []u8,
     start_prog: u16,
     handler: [32]*const fn (*CPU, u16) CPUError!void,
+    mmio: std.ArrayList(MMIODevice) = std.ArrayList(MMIODevice).empty,
 
     pub fn init(memory: []u8) CPUError!CPU {
         if (memory.len > max_memory) {
@@ -89,6 +101,37 @@ pub const CPU = struct {
         const handler = self.handler[opcode];
         std.log.info("instr: {b}", .{instr});
         try handler(self, instr);
+    }
+
+    pub fn addMMIO(self: *CPU, allocator: std.mem.Allocator, device: MMIODevice) !void {
+        try self.mmio.append(allocator, device);
+    }
+
+    fn findMMIO(self: *CPU, addr: u16) ?*const MMIODevice {
+        for (self.mmio.items) |*dev| {
+            if (addr >= dev.base and addr < dev.base + dev.size)
+                return dev;
+        }
+        return null;
+    }
+
+    fn load16(self: *CPU, addr: u16) CPUError!u16 {
+        if (self.findMMIO(addr)) |dev| {
+            return dev.read(dev.ctx, addr - dev.base);
+        }
+
+        const i = @as(usize, addr);
+        return (@as(u16, self.memory[i + 1]) << 8) | self.memory[i];
+    }
+
+    fn store16(self: *CPU, addr: u16, value: u16) CPUError!void {
+        if (self.findMMIO(addr)) |dev| {
+            return dev.write(dev.ctx, addr - dev.base, value);
+        }
+
+        const i = @as(usize, addr);
+        self.memory[i] = @intCast(value & 0xff);
+        self.memory[i + 1] = @intCast(value >> 8);
     }
 
     fn invalid(self: *CPU, instr: u16) CPUError!void {
