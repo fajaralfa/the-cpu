@@ -24,6 +24,7 @@ pub fn main() !void {
 
     var machine = try cpu.CPU.init(mem[0..]);
     try machine.addMMIO(allocator, uart_mmio);
+    defer machine.deinitMMIO(allocator);
 
     // program to print ABCDEF
     const program_words = [_]u16{

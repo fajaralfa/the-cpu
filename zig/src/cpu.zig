@@ -116,6 +116,10 @@ pub const CPU = struct {
         try self.mmio.append(allocator, device);
     }
 
+    pub fn deinitMMIO(self: *CPU, allocator: std.mem.Allocator) void {
+        self.mmio.deinit(allocator);
+    }
+
     fn findMMIO(self: *CPU, addr: u16) ?*const MMIODevice {
         for (self.mmio.items) |*dev| {
             if (addr >= dev.base and addr < dev.base + dev.size)
