@@ -58,8 +58,8 @@ pub fn andInstr(dest: u3, src1: u3, src2: u3) u16 {
     return encodeRType(7, dest, src1, src2);
 }
 
-pub fn notInstr(dest: u3, src1: u3, src2: u3) u16 {
-    return encodeRType(8, dest, src1, src2);
+pub fn notInstr(dest: u3, src1: u3) u16 {
+    return encodeRType(8, dest, src1, 0);
 }
 
 pub fn orInstr(dest: u3, src1: u3, src2: u3) u16 {
@@ -137,7 +137,7 @@ test "Instruction assignments" {
     try std.testing.expectEqual(@as(u5, 0x5), opcode(add(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 0x6), opcode(sub(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 0x7), opcode(andInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 0x8), opcode(notInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x8), opcode(notInstr(0, 0)));
     try std.testing.expectEqual(@as(u5, 0x9), opcode(orInstr(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 0xa), opcode(xorInstr(0, 0, 0)));
     try std.testing.expectEqual(@as(u5, 0xb), opcode(sll(0, 0, 0)));
