@@ -27,7 +27,7 @@ fn opcode(word: u16) u5 {
 }
 
 pub fn halt() u16 {
-    return (0x1F << 11);
+    return encodeUIType(0x1F, 0, 0);
 }
 
 pub fn lw(dest: u3, base: u3, offset: u5) u16 {
@@ -130,17 +130,20 @@ test "encodeRType layout" {
 
 test "Instruction assignments" {
     try std.testing.expectEqual(@as(u5, 0x1f), opcode(halt()));
-    try std.testing.expectEqual(@as(u5, 1), opcode(lw(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 2), opcode(sw(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 3), opcode(lui(0, 0)));
-    try std.testing.expectEqual(@as(u5, 4), opcode(addi(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 5), opcode(add(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 6), opcode(sub(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 7), opcode(andInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 8), opcode(notInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 9), opcode(orInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 10), opcode(xorInstr(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 11), opcode(sll(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 12), opcode(srl(0, 0, 0)));
-    try std.testing.expectEqual(@as(u5, 13), opcode(sra(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x1), opcode(lw(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x2), opcode(sw(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x3), opcode(lui(0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x4), opcode(addi(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x5), opcode(add(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x6), opcode(sub(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x7), opcode(andInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x8), opcode(notInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x9), opcode(orInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0xa), opcode(xorInstr(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0xb), opcode(sll(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0xc), opcode(srl(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0xd), opcode(sra(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0xe), opcode(jr(0)));
+    try std.testing.expectEqual(@as(u5, 0xf), opcode(beq(0, 0, 0)));
+    try std.testing.expectEqual(@as(u5, 0x10), opcode(bne(0, 0, 0)));
 }
