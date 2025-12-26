@@ -32,8 +32,8 @@
 
 | Opcode | Machine Code | Mnemonic | Fields Size | Operation |
 | - | - | - | - | - |
-| lw | 0x01 | lw x1, x2, 5 | 5, 3, 3, 5 (op, dest, base, offset) | x1 = mem[x2 + offset] |
-| sw | 0x02 | sw x1, x2, 5 | 5, 3, 3, 5 (op, src, base, offset) | mem[x2 + offset] = x1 |
+| lw | 0x01 | lw x1, x2, 5 | 5, 3, 3, 5 (op, dest, base, offset) | x1 = mem[x2 + (offset * 2)] |
+| sw | 0x02 | sw x1, x2, 5 | 5, 3, 3, 5 (op, src, base, offset) | mem[x2 + (offset * 2)] = x1 |
 | lui | 0x03 |lui x1, #0xFF | 5, 3, 8 (op, dest, val) | x1 = 0xFF << 8 |
 | addi | 0x04 | addi x1, x2, #0x1F | 5, 3, 3, 5 (op, dest, src, val) | x1 = x2 + 0x1F |
 | add | 0x05 |add x1, x2, x3 | 5, 3, 3, 3, 2 (op, dest, src1, src2, pad) | x1 = x2 + x3 |

@@ -26,7 +26,7 @@ pub const CPU = struct {
     running: bool,
     register: [register_count]u16,
     memory: []u8,
-    start_prog: u16,
+    start_prog: u16, // must be 16 bit aligned
     handler: [32]*const fn (*CPU, u16) CPUError!void,
     mmio: std.ArrayList(MMIODevice) = std.ArrayList(MMIODevice).empty,
 
@@ -73,7 +73,8 @@ pub const CPU = struct {
 
     pub fn runProgram(self: *CPU) !void {
         self.running = true;
-        self.register[0] = self.start_prog;
+        self.register[0] = self.start_prog; // program counter init
+        self.register[1] = self.start_prog - 2; // stack pointer init (aligned)
         const allocator = std.heap.page_allocator;
         while (self.running) {
             var result = std.ArrayList(u8).empty;
@@ -163,7 +164,8 @@ pub const CPU = struct {
         const dest: u3 = @intCast((instr >> 8) & std.math.maxInt(u3));
         const base: u3 = @intCast((instr >> 5) & std.math.maxInt(u3));
         const offset: u5 = @intCast(instr & std.math.maxInt(u5));
-        const addr = self.register[base] + offset;
+        const offsetScaled: i16 = @as(i5, @bitCast(offset)) * 2;
+        const addr = @as(u16, @bitCast(@as(i16, @bitCast(self.register[base])) + offsetScaled));
         if (addr % 2 != 0) {
             return CPUError.MisalignedMemory;
         }
@@ -177,7 +179,8 @@ pub const CPU = struct {
         const src: u3 = @intCast((instr >> 8) & std.math.maxInt(u3));
         const base: u3 = @intCast((instr >> 5) & std.math.maxInt(u3));
         const offset: u5 = @intCast(instr & std.math.maxInt(u5));
-        const addr = self.register[base] + offset;
+        const offsetScaled: i16 = @as(i5, @bitCast(offset)) * 2;
+        const addr = @as(u16, @bitCast(@as(i16, @bitCast(self.register[base])) + offsetScaled));
         if (addr % 2 != 0) {
             return CPUError.MisalignedMemory;
         }
@@ -349,7 +352,19 @@ test "lw" {
     cpu.memory[10] = 0x11;
     cpu.memory[11] = 0x23;
     cpu.register[2] = 10;
+
+    // 0 offset
     try cpu.lw((1 << 8) | (2 << 5) | 0);
+    try std.testing.expect(cpu.register[1] == 0x2311);
+
+    // -2 offset
+    cpu.register[2] = 14;
+    try cpu.lw((1 << 8) | (2 << 5) | 0x1E);
+    try std.testing.expect(cpu.register[1] == 0x2311);
+
+    // 2 offset
+    cpu.register[2] = 6;
+    try cpu.lw((1 << 8) | (2 << 5) | 2);
     try std.testing.expect(cpu.register[1] == 0x2311);
 }
 
@@ -370,9 +385,20 @@ test "sw" {
     var cpu = try CPU.init(&mem);
     cpu.register[2] = 10;
     cpu.register[1] = 0x2311;
+    // zero offset
     try cpu.sw((1 << 8) | (2 << 5) | 0);
     try std.testing.expect(cpu.memory[10] == 0x11);
     try std.testing.expect(cpu.memory[11] == 0x23);
+
+    // positive offset (2)
+    try cpu.sw((1 << 8) | (2 << 5) | 2);
+    try std.testing.expect(cpu.memory[14] == 0x11);
+    try std.testing.expect(cpu.memory[15] == 0x23);
+
+    // negative offset (-2)
+    try cpu.sw((1 << 8) | (2 << 5) | 0x1E);
+    try std.testing.expect(cpu.memory[6] == 0x11);
+    try std.testing.expect(cpu.memory[7] == 0x23);
 }
 
 test "sw OutOfBound, MisalignedMemory" {
