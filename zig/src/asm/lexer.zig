@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Token = struct {
+pub const Token = struct {
     type: TokenType,
     literal: []const u8,
     pos: struct {
@@ -12,7 +12,7 @@ const Token = struct {
     }
 };
 
-const TokenType = enum {
+pub const TokenType = enum {
     Label,
     Opcode,
     Register,
@@ -25,11 +25,11 @@ const TokenType = enum {
     EOF,
 };
 
-const LexerError = error{
+pub const LexerError = error{
     InvalidToken,
 };
 
-const Lexer = struct {
+pub const Lexer = struct {
     start: usize,
     current: usize,
     allocator: std.mem.Allocator,
