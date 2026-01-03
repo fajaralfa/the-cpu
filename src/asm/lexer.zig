@@ -3,22 +3,18 @@ const std = @import("std");
 pub const Token = struct {
     type: TokenType,
     literal: []const u8,
-    pos: struct {
-        line: u32,
-        col: u32,
-    },
+    pos: Position,
     pub fn print(self: *Token) void {
         std.debug.print("{}\n", .{self.type});
     }
 };
 
 pub const TokenType = enum {
-    Label,
-    Opcode,
-    Register,
+    Identifier,
     ImmVal,
     Comma,
     Colon,
+    Newline,
     EOF,
 };
 
@@ -26,9 +22,15 @@ pub const LexerError = error{
     InvalidToken,
 };
 
+pub const Position = struct {
+    line: u32,
+    col: u32,
+};
+
 pub const Lexer = struct {
     start: usize,
     current: usize,
+    pos: Position,
     allocator: std.mem.Allocator,
     input: []const u8,
     tokens: std.ArrayList(Token),
@@ -38,6 +40,10 @@ pub const Lexer = struct {
             .allocator = allocator,
             .start = 0,
             .current = 0,
+            .pos = .{
+                .line = 1,
+                .col = 0,
+            },
             .input = input,
             .tokens = std.ArrayList(Token).empty,
         };
@@ -55,7 +61,7 @@ pub const Lexer = struct {
             self.start = self.current;
             try self.scanToken();
         }
-        // set pointer at the end of input
+        // set position at the end of input
         self.start = self.input.len - 1;
         self.current = self.start;
         try self.addToken(.EOF);
@@ -66,7 +72,12 @@ pub const Lexer = struct {
     fn scanToken(self: *Lexer) !void {
         const c = self.next();
         switch (c) {
-            ' ', '\n', '\t', '/' => {},
+            ' ', '\t', '/' => {},
+            '\n' => {
+                try self.newline();
+                self.pos.line += 1;
+                self.pos.col = 0;
+            },
             'A'...'Z', 'a'...'z', '_' => try self.identifier(),
             '#' => try self.number(),
             ',' => try self.addToken(.Comma),
@@ -78,6 +89,7 @@ pub const Lexer = struct {
     fn next(self: *Lexer) u8 {
         const c = self.input[self.current];
         self.current += 1;
+        self.pos.col += 1;
         return c;
     }
 
@@ -97,7 +109,7 @@ pub const Lexer = struct {
         const token = Token{
             .type = typ,
             .literal = literal,
-            .pos = .{ .line = 1, .col = 1 },
+            .pos = self.pos,
         };
         try self.tokens.append(self.allocator, token);
     }
@@ -106,36 +118,11 @@ pub const Lexer = struct {
         while (std.ascii.isAlphanumeric(self.peek())) {
             _ = self.next();
         }
-        const literal = self.input[self.start..self.current]; // no need alloc, just for checking
-        var typ: TokenType = undefined;
-        if (isRegister(literal)) {
-            typ = .Register;
-        } else if (isOpcode(literal)) {
-            typ = .Opcode;
-        } else {
-            typ = .Label;
-        }
-        try self.addToken(typ);
+        try self.addToken(.Identifier);
     }
 
-    fn isOpcode(literal: []const u8) bool {
-        const opcodes = [_][]const u8{ "lw", "sw", "lui", "addi", "add", "sub", "and", "not", "or", "xor", "sll", "srl", "sra", "jr", "beq", "bne", "halt" };
-        for (opcodes) |o| {
-            if (std.mem.eql(u8, o, literal)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    fn isRegister(literal: []const u8) bool {
-        const registers = [_][]const u8{ "x1", "x2", "x3", "pc", "sp", "mepc", "mcause", "mtvec" };
-        for (registers) |r| {
-            if (std.mem.eql(u8, r, literal)) {
-                return true;
-            }
-        }
-        return false;
+    fn newline(self: *Lexer) !void {
+        try self.addToken(.Newline);
     }
 
     fn captureLiteral(self: *Lexer) ![]const u8 {
@@ -174,7 +161,7 @@ pub const Lexer = struct {
     }
 };
 
-test "Scan" {
+test "Scan ignore position" {
     const str: []const u8 = ", x1 _start:";
     const allocator = std.testing.allocator;
     var lex = Lexer.init(allocator, str);
@@ -183,8 +170,8 @@ test "Scan" {
 
     const expected = [_]Token{
         .{ .type = .Comma, .literal = ",", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Register, .literal = "x1", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Label, .literal = "_start", .pos = .{ .line = 1, .col = 1 } },
+        .{ .type = .Identifier, .literal = "x1", .pos = .{ .line = 1, .col = 1 } },
+        .{ .type = .Identifier, .literal = "_start", .pos = .{ .line = 1, .col = 1 } },
         .{ .type = .Colon, .literal = ":", .pos = .{ .line = 1, .col = 1 } },
         .{ .type = .EOF, .literal = "", .pos = .{ .line = 1, .col = 1 } },
     };
@@ -194,7 +181,7 @@ test "Scan" {
     }
 }
 
-test "Scan immediate" {
+test "Scan immediate ignore position" {
     const str: []const u8 = "#123 #0xFA #0o12 #0b101";
     const allocator = std.testing.allocator;
     var lex = Lexer.init(allocator, str);
@@ -214,40 +201,44 @@ test "Scan immediate" {
     }
 }
 
-test "is register" {
-    try std.testing.expect(Lexer.isRegister("x1"));
-    try std.testing.expect(!Lexer.isRegister("_start"));
-}
-
-test "Scan opcode" {
-    const str = "lw sw lui addi add sub and not or xor sll srl sra jr beq bne halt";
+test "Scan identifier ignore position" {
+    const str = "lw sw halt";
     const allocator = std.testing.allocator;
     var lex = Lexer.init(allocator, str);
     const tokens = try lex.tokenize();
     defer lex.deinit();
 
     const expected = [_]Token{
-        .{ .type = .Opcode, .literal = "lw", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "sw", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "lui", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "addi", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "add", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "sub", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "and", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "not", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "or", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "xor", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "sll", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "srl", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "sra", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "jr", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "beq", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "bne", .pos = .{ .line = 1, .col = 1 } },
-        .{ .type = .Opcode, .literal = "halt", .pos = .{ .line = 1, .col = 1 } },
+        .{ .type = .Identifier, .literal = "lw", .pos = .{ .line = 1, .col = 1 } },
+        .{ .type = .Identifier, .literal = "sw", .pos = .{ .line = 1, .col = 1 } },
+        .{ .type = .Identifier, .literal = "halt", .pos = .{ .line = 1, .col = 1 } },
         .{ .type = .EOF, .literal = "", .pos = .{ .line = 1, .col = 1 } },
     };
     for (expected, tokens.items) |exp, act| {
         try std.testing.expectEqual(exp.type, act.type);
+        try std.testing.expectEqualSlices(u8, exp.literal, act.literal);
+    }
+}
+
+test "Scan newline" {
+    const str = "lw sw\nlw\n";
+    const allocator = std.testing.allocator;
+    var lex = Lexer.init(allocator, str);
+    const tokens = try lex.tokenize();
+    defer lex.deinit();
+
+    const expected = [_]Token{
+        .{ .type = .Identifier, .literal = "lw", .pos = .{ .line = 1, .col = 2 } },
+        .{ .type = .Identifier, .literal = "sw", .pos = .{ .line = 1, .col = 5 } },
+        .{ .type = .Newline, .literal = "\n", .pos = .{ .line = 1, .col = 6 } },
+        .{ .type = .Identifier, .literal = "lw", .pos = .{ .line = 2, .col = 2 } },
+        .{ .type = .Newline, .literal = "\n", .pos = .{ .line = 2, .col = 3 } },
+        .{ .type = .EOF, .literal = "", .pos = .{ .line = 3, .col = 0 } },
+    };
+    for (expected, tokens.items) |exp, act| {
+        try std.testing.expectEqual(exp.type, act.type);
+        try std.testing.expectEqual(exp.pos.line, act.pos.line);
+        try std.testing.expectEqual(exp.pos.col, act.pos.col);
         try std.testing.expectEqualSlices(u8, exp.literal, act.literal);
     }
 }
