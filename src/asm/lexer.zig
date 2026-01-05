@@ -138,23 +138,34 @@ pub const Lexer = struct {
 
             const next_c = self.peek();
             switch (next_c) {
-                'x', 'X', 'b', 'B', 'o', 'O' => {
+                'x', 'X' => {
                     _ = self.next();
-                    while (std.ascii.isHex(self.peek())) {
-                        _ = self.next();
-                    }
-                    try self.addToken(.ImmVal);
+                    if (!std.ascii.isHex(self.peek())) return LexerError.InvalidToken;
+                    while (std.ascii.isHex(self.peek())) _ = self.next();
                 },
-                else => {},
+                'b', 'B' => {
+                    _ = self.next();
+                    if (self.peek() != '0' and self.peek() != '1') return LexerError.InvalidToken;
+                    while (self.peek() == '0' or self.peek() == '1') _ = self.next();
+                },
+                'o', 'O' => {
+                    _ = self.next();
+                    if (self.peek() < '0' or self.peek() > '7') return LexerError.InvalidToken;
+                    while (self.peek() >= '0' and self.peek() <= '7') _ = self.next();
+                },
+                else => {}, // could be just 0
             }
-            return;
+        } else if (!std.ascii.isDigit(self.peek())) {
+            return LexerError.InvalidToken;
+        } else {
+            while (std.ascii.isDigit(self.peek())) {
+                _ = self.next();
+            }
         }
 
-        if (!std.ascii.isDigit(self.peek())) {
+        const c = self.peek();
+        if (std.ascii.isAlphabetic(c) or c == '_') {
             return LexerError.InvalidToken;
-        }
-        while (std.ascii.isDigit(self.peek())) {
-            _ = self.next();
         }
 
         try self.addToken(.ImmVal);
@@ -199,6 +210,21 @@ test "Scan immediate ignore position" {
         try std.testing.expectEqual(exp.type, act.type);
         try std.testing.expectEqualSlices(u8, exp.literal, act.literal);
     }
+}
+
+fn expectInvalidToken(str: []const u8) !void {
+    const allocator = std.testing.allocator;
+    var lex = Lexer.init(allocator, str);
+    const tokens = lex.tokenize();
+    defer lex.deinit();
+
+    try std.testing.expectError(LexerError.InvalidToken, tokens);
+}
+
+test "Scan invalid immediates" {
+    try expectInvalidToken("#wrong");
+    try expectInvalidToken("#0wrong");
+    try expectInvalidToken("#23wrong");
 }
 
 test "Scan identifier ignore position" {
