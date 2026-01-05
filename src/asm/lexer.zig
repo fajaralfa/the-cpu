@@ -133,42 +133,59 @@ pub const Lexer = struct {
     }
 
     fn number(self: *Lexer) !void {
+        var base: u8 = 10; // default decimal
+
+        // Handle optional leading 0 + base prefix
         if (self.peek() == '0') {
             _ = self.next();
 
-            const next_c = self.peek();
-            switch (next_c) {
+            const c = self.peek();
+            switch (c) {
                 'x', 'X' => {
                     _ = self.next();
-                    if (!std.ascii.isHex(self.peek())) return LexerError.InvalidToken;
-                    while (std.ascii.isHex(self.peek())) _ = self.next();
+                    base = 16;
                 },
                 'b', 'B' => {
                     _ = self.next();
-                    if (self.peek() != '0' and self.peek() != '1') return LexerError.InvalidToken;
-                    while (self.peek() == '0' or self.peek() == '1') _ = self.next();
+                    base = 2;
                 },
                 'o', 'O' => {
                     _ = self.next();
-                    if (self.peek() < '0' or self.peek() > '7') return LexerError.InvalidToken;
-                    while (self.peek() >= '0' and self.peek() <= '7') _ = self.next();
+                    base = 8;
                 },
-                else => {}, // could be just 0
-            }
-        } else if (!std.ascii.isDigit(self.peek())) {
-            return LexerError.InvalidToken;
-        } else {
-            while (std.ascii.isDigit(self.peek())) {
-                _ = self.next();
+                else => {
+                    // leading 0 with no prefix is decimal 0
+                    base = 10;
+                },
             }
         }
 
-        const c = self.peek();
-        if (std.ascii.isAlphabetic(c) or c == '_') {
+        // At least one digit is required
+        if (!isDigitForBase(self.peek(), base)) {
+            return LexerError.InvalidToken;
+        }
+
+        // Consume all digits valid for this base
+        while (isDigitForBase(self.peek(), base)) {
+            _ = self.next();
+        }
+
+        // If any letters/underscores are left, it's invalid (e.g., #23someword)
+        if (std.ascii.isAlphabetic(self.peek()) or self.peek() == '_') {
             return LexerError.InvalidToken;
         }
 
         try self.addToken(.ImmVal);
+    }
+
+    fn isDigitForBase(c: u8, base: u8) bool {
+        switch (base) {
+            2 => return c == '0' or c == '1',
+            8 => return c >= '0' and c <= '7',
+            10 => return std.ascii.isDigit(c),
+            16 => return std.ascii.isDigit(c) or (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F'),
+            else => return false,
+        }
     }
 };
 
